@@ -847,17 +847,15 @@ class BackendSeam(unittest.TestCase):
         r = self._rec(backend="sck")
         r.proc = type("P", (), {"stdout": io.BytesIO(
             b"READY\nT0 1000.0\nSTAT 5 6 1 0 0\nFILTER 2 0\n")})()
-        before = time.monotonic()
-        r._read_sck_stdout()
-        after = time.monotonic()
-        # pts0 is far in the past on the uptime clock, so t0 must be too --
-        # and by the same amount, in our own timeframe.
-        expected = sck.host_pts_to_monotonic(1000.0)
-        self.assertAlmostEqual(r._t0, expected, delta=0.5)
-        self.assertLess(r._t0, before)
+        converted = 123.456
+        with mock.patch.object(
+                sck, "host_pts_to_monotonic",
+                return_value=converted) as convert:
+            r._read_sck_stdout()
+        convert.assert_called_once_with(1000.0)
+        self.assertEqual(r._t0, converted)
         self.assertEqual(r._sck_stat["dup"], 1)
         self.assertEqual(r._sck_filter["applied"], 2)
-        del after
 
     def test_an_unparseable_line_never_takes_down_a_recording(self):
         r = self._rec(backend="sck")
