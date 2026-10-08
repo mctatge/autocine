@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projects - AutoCine</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg fill='none' stroke='%23eaeaea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 11V8.5A2.5 2.5 0 018.5 6H11'/%3E%3Cpath d='M21 6h2.5A2.5 2.5 0 0126 8.5V11'/%3E%3Cpath d='M26 21v2.5a2.5 2.5 0 01-2.5 2.5H21'/%3E%3Cpath d='M11 26H8.5A2.5 2.5 0 016 23.5V21'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff2a2a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/library.css" />
+</head>
+<body class="lib-body">
+  <!-- sticky frosted-glass nav: the card grid scrolls underneath it -->
+  <header class="lib-top" id="lib-top">
+    <nav class="lib-nav" aria-label="AutoCine">
+      <div class="lib-brand">
+        <span class="lib-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.5 8V5.5a2 2 0 012-2H8"/>
+              <path d="M16 3.5h2.5a2 2 0 012 2V8"/>
+              <path d="M20.5 16v2.5a2 2 0 01-2 2H16"/>
+              <path d="M8 20.5H5.5a2 2 0 01-2-2V16"/>
+            </g>
+            <circle cx="12" cy="12" r="3" fill="#ff2a2a"/>
+          </svg>
+        </span>
+        <h1 class="t-display lib-name">AutoCine</h1>
+        <p class="t-mono lib-sub" id="lib-sub">Projects</p>
+      </div>
+      <div class="lib-top-right">
+        <span class="pill" id="lib-status" hidden><span class="dot"></span><span id="lib-status-text"></span></span>
+        <button id="lib-refresh" class="btn-quiet lib-chip-btn">Refresh</button>
+        <button id="lib-record" class="lib-record-btn">
+          <span class="lib-rec-dot"></span>New Recording
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="lib-perms" id="lib-perms" hidden>
+    <div>
+      <strong id="lib-perms-title">Permissions needed</strong>
+      <span class="t-label" id="lib-perms-detail"></span>
+    </div>
+    <button id="lib-perms-refresh" class="btn-quiet lib-chip-btn">Re-check</button>
+  </div>
+
+  <!-- search your recordings: an ARIA 1.2 combobox over project names and
+       transcripts (logic in search.js, UI + transcript fetches in library.js) -->
+  <section class="lib-search-wrap" id="lib-search-wrap" hidden>
+    <form class="lib-search" id="lib-search" role="search" autocomplete="off" novalidate>
+      <label class="sr-only" for="lib-q">Search your recordings by name or what was said</label>
+      <div class="lib-q-bar" id="lib-q-bar">
+        <svg class="lib-q-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="8.6" cy="8.6" r="5.6" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M12.8 12.8L17 17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <input id="lib-q" type="text" role="combobox" aria-autocomplete="list"
+               aria-expanded="false" aria-controls="lib-q-list" aria-describedby="lib-q-help"
+               autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"
+               placeholder="Search your recordings by name or what was said" />
+        <kbd class="lib-q-slash" aria-hidden="true" title="Press / to search">/</kbd>
+        <button type="submit" class="lib-q-go" id="lib-q-go" tabindex="-1" aria-label="Open the highlighted result">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <p class="sr-only" id="lib-q-help">Matches project names and transcripts. Use the up and down arrows to move through results, Enter to open one, Escape to close.</p>
+      <div class="lib-q-panel" id="lib-q-panel" hidden>
+        <ul class="lib-q-list" id="lib-q-list" role="listbox" aria-label="Matching recordings"></ul>
+        <div class="lib-q-empty" id="lib-q-empty" hidden></div>
+        <div class="lib-q-foot">
+          <span class="lib-q-status" id="lib-q-status"></span>
+          <span class="lib-q-keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> move <kbd>↵</kbd> open <kbd>esc</kbd> close</span>
+        </div>
+      </div>
+      <div class="sr-only" id="lib-q-live" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <main class="lib-main">
+    <div class="lib-grid" id="lib-grid"></div>
+
+    <div class="lib-empty" id="lib-empty" hidden>
+      <div class="lib-empty-art" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.5 8V5.5a2 2 0 012-2H8"/>
+            <path d="M16 3.5h2.5a2 2 0 012 2V8"/>
+            <path d="M20.5 16v2.5a2 2 0 01-2 2H16"/>
+            <path d="M8 20.5H5.5a2 2 0 01-2-2V16"/>
+          </g>
+          <circle cx="12" cy="12" r="3" fill="#ff2a2a"/>
+        </svg>
+      </div>
+      <h2 class="t-display">No recordings yet</h2>
+      <p class="t-label">Record your screen. AutoCine turns each click into a planned camera move.</p>
+      <button id="lib-record-empty" class="lib-record-btn"><span class="lib-rec-dot"></span>New Recording</button>
+    </div>
+  </main>
+
+  <script src="/shared.js"></script>
+  <script src="/search.js"></script>
+  <script src="/library.js"></script>
+  <script src="/live-reload.js"></script>
+</body>
+</html>

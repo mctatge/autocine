@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AutoCine: an MCP-native screen recorder for macOS</title>
+  <meta name="description" content="AutoCine records your Mac and turns clicks into camera moves. Edit locally or connect an MCP-capable AI client to locate moments, write edits, preview frames and render.">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AutoCine">
+  <meta property="og:title" content="AutoCine: your screen, directed">
+  <meta property="og:description" content="An experimental macOS screen recorder with click-driven camera moves, non-destructive edits and a local MCP server.">
+  <!-- TODO(hero-video): add og:image (an ABSOLUTE url) once media/hero-poster.jpg exists and the site has a domain. -->
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cg stroke='%23eaeaea' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8V5.5a2 2 0 012-2H8'/%3E%3Cpath d='M16 3.5h2.5a2 2 0 012 2V8'/%3E%3Cpath d='M20.5 16v2.5a2 2 0 01-2 2H16'/%3E%3Cpath d='M8 20.5H5.5a2 2 0 01-2-2V16'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='3' fill='%23ff2a2a'/%3E%3C/svg%3E">
+  <!-- System fonts keep the public preview independent of third-party requests. -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#search-input">Skip to the search</a>
+
+  <div class="frame" id="top">
+    <!-- ================= background: a take being filmed =================
+         .camera is the virtual camera: main.js moves it with springs. It
+         can hold a real hero video and, under it, the placeholder "screen".
+         The placeholder is the complete public default. Add the documented
+         poster and source attributes only when those media files exist. -->
+    <div class="stage" id="stage" aria-hidden="true">
+      <div class="camera" id="camera">
+        <svg class="placeholder" id="placeholder" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" focusable="false" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">
+          <defs>
+            <radialGradient id="ph-wall" cx="0.3" cy="0.02" r="1.15">
+              <stop offset="0" stop-color="#9b9387"/>
+              <stop offset="0.55" stop-color="#5d564d"/>
+              <stop offset="1" stop-color="#2e2a26"/>
+            </radialGradient>
+            <linearGradient id="ph-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2a2926" stop-opacity=".16"/>
+              <stop offset="1" stop-color="#2a2926" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- the desktop -->
+          <rect width="1600" height="1000" fill="url(#ph-wall)"/>
+          <path d="M-40 700C260 560 640 800 1040 640S1560 520 1660 590V1040H-40z" fill="#0d0c0b" fill-opacity=".16"/>
+          <!-- no menu bar: the page's floating nav sits where it would be,
+               and a sliver of one above the nav read as stray marks -->
+
+          <!-- a terminal, behind (the API quickstart take) -->
+          <rect x="24" y="246" width="384" height="472" rx="14" fill="#000" fill-opacity=".3"/>
+          <rect x="30" y="236" width="372" height="470" rx="12" fill="#1c1b19"/>
+          <path d="M30 248a12 12 0 0 1 12-12h348a12 12 0 0 1 12 12v14H30z" fill="#2a2926"/>
+          <g fill="#55524d"><circle cx="48" cy="250" r="5"/><circle cx="65" cy="250" r="5"/><circle cx="82" cy="250" r="5"/></g>
+          <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#d9d3c9">
+            <text x="48" y="290">$ api login</text>
+            <text x="48" y="346">$ api get /items</text>
+            <text x="48" y="424">$ api get /orders</text>
+            <text x="48" y="480">$ api export --csv</text>
+            <text x="48" y="536">$</text>
+          </g>
+          <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#9d978d">
+            <text x="48" y="312">✓ key saved to .env</text>
+            <text x="48" y="368">{ "items": [ … ],</text>
+            <text x="48" y="390">  "next": "c_29f" }</text>
+            <text x="48" y="502">✓ wrote items.csv</text>
+          </g>
+          <text x="48" y="446" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#e2a695">401 Unauthorized</text>
+          <rect x="64" y="526" width="8" height="13" fill="#d9d3c9"/>
+
+          <!-- a metrics window, behind (the weekly metrics take): one region
+               per thing that take talks about, so a pick can frame it -->
+          <rect x="1328" y="128" width="264" height="560" rx="14" fill="#000" fill-opacity=".28"/>
+          <rect x="1334" y="118" width="252" height="560" rx="12" fill="#ebe7e0"/>
+          <path d="M1334 130a12 12 0 0 1 12-12h228a12 12 0 0 1 12 12v14h-252z" fill="#dcd8d0"/>
+          <text x="1384" y="176" font-size="15" font-weight="650" fill="#2a2926">Weekly metrics</text>
+          <g font-size="12" fill="#8e8981">
+            <text x="1384" y="204">Signups</text>
+            <text x="1384" y="312">Retention</text>
+            <text x="1384" y="412">Funnel</text>
+            <text x="1384" y="516">Support tickets</text>
+            <text x="1384" y="610">Action items</text>
+          </g>
+          <path d="M1384 268 1410 262 1436 264 1462 250 1488 254 1514 238 1540 232 1566 218V284H1384z" fill="url(#ph-area)"/>
+          <polyline points="1384,268 1410,262 1436,264 1462,250 1488,254 1514,238 1540,232 1566,218" fill="none" stroke="#2a2926" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="1566" cy="218" r="4" fill="#2a2926"/>
+          <g fill="#8e8981">
+            <rect x="1384" y="324" width="15" height="58" rx="2"/><rect x="1407" y="348" width="15" height="34" rx="2"/>
+            <rect x="1430" y="334" width="15" height="48" rx="2"/><rect x="1453" y="330" width="15" height="52" rx="2"/>
+            <rect x="1476" y="328" width="15" height="54" rx="2"/><rect x="1499" y="326" width="15" height="56" rx="2"/>
+            <rect x="1522" y="325" width="15" height="57" rx="2"/><rect x="1545" y="324" width="15" height="58" rx="2"/>
+          </g>
+          <g fill="#4a4743">
+            <rect x="1384" y="424" width="184" height="12" rx="3"/>
+            <rect x="1384" y="442" width="150" height="12" rx="3" fill-opacity=".85"/>
+            <rect x="1384" y="460" width="66" height="12" rx="3" fill-opacity=".7"/>
+            <rect x="1384" y="478" width="56" height="12" rx="3" fill-opacity=".6"/>
+          </g>
+          <polyline points="1384,532 1410,536 1436,534 1462,546 1488,554 1514,558 1540,566 1566,570" fill="none" stroke="#76716a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <g fill="none" stroke="#8e8981" stroke-width="1.5"><rect x="1384.75" y="621.75" width="10.5" height="10.5" rx="2.5"/><rect x="1384.75" y="641.75" width="10.5" height="10.5" rx="2.5"/></g>
+          <g fill="#b0aba3"><rect x="1404" y="624" width="150" height="7" rx="2"/><rect x="1404" y="644" width="118" height="7" rx="2"/></g>
+
+          <!-- the browser, mid-checkout (the featured take). Drawn in page
+               units (1520 wide) and placed on the desktop at 75%. -->
+          <g transform="translate(200 28) scale(.75)">
+            <rect x="33" y="50" width="1534" height="1145" rx="19" fill="#000" fill-opacity=".32"/>
+            <rect x="40" y="40" width="1520" height="1143" rx="16" fill="#f7f6f3"/>
+            <path d="M40 56a16 16 0 0 1 16-16h1488a16 16 0 0 1 16 16v56H40z" fill="#e8e5e0"/>
+            <g fill="#cbc6be"><circle cx="66" cy="60" r="6.5"/><circle cx="88" cy="60" r="6.5"/><circle cx="110" cy="60" r="6.5"/></g>
+            <!-- tabs -->
+            <rect x="136" y="46" width="184" height="30" rx="8" fill="#f7f6f3"/>
+            <rect x="152" y="55" width="12" height="12" rx="3" fill="#2a2926"/>
+            <text x="174" y="66" font-size="13" fill="#3a3733">Checkout</text>
+            <rect x="336" y="55" width="12" height="12" rx="3" fill="#b8b2a9"/>
+            <text x="358" y="66" font-size="13" fill="#857f77">Pricing</text>
+            <line x1="480.5" y1="52" x2="480.5" y2="70" stroke="#d2cdc5"/>
+            <rect x="496" y="55" width="12" height="12" rx="3" fill="#b8b2a9"/>
+            <text x="518" y="66" font-size="13" fill="#857f77">Settings</text>
+            <!-- toolbar -->
+            <g fill="none" stroke="#a39e96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M72 88l-6 6 6 6"/><path d="M92 88l6 6-6 6"/></g>
+            <rect x="520" y="82" width="560" height="24" rx="12" fill="#f7f6f3"/>
+            <text x="800" y="99" text-anchor="middle" font-size="13" fill="#7c776f">shop.example/checkout</text>
+            <line x1="40" y1="112.5" x2="1560" y2="112.5" stroke="#dcd8d1"/>
+
+            <!-- site header -->
+            <rect x="96" y="132" width="26" height="26" rx="7" fill="#2a2926"/>
+            <text x="134" y="151" font-size="17" font-weight="650" fill="#2a2926" letter-spacing="-.2">Example Goods</text>
+            <g font-size="14" fill="#8e8981"><text x="1232" y="150">Shop</text><text x="1290" y="150">Journal</text><text x="1368" y="150">Help</text></g>
+            <path d="M1462 136h6l4 15h17l3-11h-22" fill="none" stroke="#2a2926" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <g fill="#2a2926"><circle cx="1475" cy="157" r="2.2"/><circle cx="1487" cy="157" r="2.2"/></g>
+            <line x1="40" y1="176.5" x2="1560" y2="176.5" stroke="#e5e1da"/>
+
+            <!-- left column: the form -->
+            <text x="96" y="234" font-size="34" font-weight="650" fill="#2a2926" letter-spacing="-.5">Checkout</text>
+            <text x="96" y="264" font-size="14" fill="#8e8981">Cart  ›  Information  ›  Shipping  ›  Payment</text>
+            <text x="96" y="310" font-size="16" font-weight="600" fill="#2a2926">Contact</text>
+            <rect x="96" y="322" width="744" height="46" rx="9" fill="#fff" stroke="#dcd7cf"/>
+            <text x="114" y="350" font-size="15" fill="#4a4743">you@example.com</text>
+            <text x="96" y="404" font-size="16" font-weight="600" fill="#2a2926">Shipping address</text>
+            <!-- empty until the take's autofill beat; main.js toggles the tint + text -->
+            <g id="ph-addr" fill="#fff" stroke="#dcd7cf">
+              <rect x="96" y="416" width="364" height="46" rx="9"/><rect x="476" y="416" width="364" height="46" rx="9"/>
+              <rect x="96" y="474" width="744" height="46" rx="9"/>
+              <rect x="96" y="532" width="492" height="46" rx="9"/><rect x="600" y="532" width="240" height="46" rx="9"/>
+            </g>
+            <g id="ph-addr-hint" font-size="15" fill="#a39e96">
+              <text x="114" y="444">First name</text><text x="494" y="444">Last name</text>
+              <text x="114" y="502">Address</text>
+              <text x="114" y="560">City</text><text x="618" y="560">ZIP code</text>
+            </g>
+            <g id="ph-addr-text" font-size="15" fill="#4a4743" opacity="0">
+              <text x="114" y="444">Sam</text><text x="494" y="444">Sample</text>
+              <text x="114" y="502">1 Example Street</text>
+              <text x="114" y="560">Anytown</text><text x="618" y="560">00000</text>
+            </g>
+            <text x="96" y="616" font-size="16" font-weight="600" fill="#2a2926">Shipping method</text>
+            <rect id="ph-opt-std" x="96" y="628" width="744" height="58" rx="9" fill="#fff" stroke="#2a2926" stroke-width="2"/>
+            <circle cx="126" cy="657" r="9" fill="none" stroke="#2a2926" stroke-width="2"/>
+            <circle id="ph-dot-std" cx="126" cy="657" r="4.5" fill="#2a2926"/>
+            <text x="150" y="662" font-size="15" fill="#2a2926">Standard</text>
+            <text x="226" y="662" font-size="15" fill="#8e8981">4–6 business days</text>
+            <rect x="772" y="652" width="44" height="10" rx="3" fill="#4a4743"/>
+            <rect id="ph-opt-exp" x="96" y="694" width="744" height="58" rx="9" fill="#fff" stroke="#dcd7cf" stroke-width="1"/>
+            <circle cx="126" cy="723" r="9" fill="none" stroke="#2a2926" stroke-width="2"/>
+            <circle id="ph-dot-exp" cx="126" cy="723" r="4.5" fill="#2a2926" opacity="0"/>
+            <text x="150" y="728" font-size="15" fill="#2a2926">Express</text>
+            <text x="218" y="728" font-size="15" fill="#8e8981">Next day</text>
+            <rect x="766" y="718" width="50" height="10" rx="3" fill="#4a4743"/>
+            <text x="96" y="794" font-size="16" font-weight="600" fill="#2a2926">Payment</text>
+            <g fill="#fff" stroke="#dcd7cf">
+              <rect x="96" y="806" width="744" height="46" rx="9"/>
+              <rect x="96" y="862" width="364" height="46" rx="9"/><rect x="476" y="862" width="364" height="46" rx="9"/>
+            </g>
+            <g id="ph-card-empty" font-size="15" fill="#a39e96">
+              <text x="114" y="834">Card number</text><text x="114" y="890">MM / YY</text><text x="494" y="890">CVC</text>
+            </g>
+            <g id="ph-card-full" font-size="15" fill="#4a4743" letter-spacing="2" opacity="0">
+              <text x="114" y="835">••••  ••••  ••••  ••••</text><text x="114" y="891">•• / ••</text><text x="494" y="891">•••</text>
+            </g>
+            <rect x="96" y="928" width="18" height="18" rx="4" fill="#2a2926"/>
+            <path d="M100 937.5l3.4 3.4 6.4-6.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="126" y="942" font-size="15" fill="#4a4743">Billing address same as shipping</text>
+            <rect x="96.5" y="966.5" width="17" height="17" rx="4" fill="#fff" stroke="#cbc6be"/>
+            <text x="126" y="980" font-size="15" fill="#4a4743">Save my information for next time</text>
+            <line x1="96" y1="1034.5" x2="1492" y2="1034.5" stroke="#e5e1da"/>
+            <g font-size="13" fill="#a39e96"><text x="96" y="1076">Refund policy</text><text x="214" y="1076">Shipping policy</text><text x="346" y="1076">Privacy policy</text><text x="470" y="1076">Terms of service</text></g>
+
+            <!-- right column: order summary (two items, so "Place order" sits
+                 clear of the prompt bar at common laptop sizes) -->
+            <rect x="1080" y="200" width="440" height="620" rx="14" fill="#efece6"/>
+            <text x="1108" y="242" font-size="18" font-weight="600" fill="#2a2926">Order summary</text>
+            <rect x="1108" y="266" width="56" height="56" rx="9" fill="#d9d3c9"/>
+            <rect x="1108" y="336" width="56" height="56" rx="9" fill="#cbc5ba"/>
+            <g fill="#f4f1ec" fill-opacity=".7"><circle cx="1136" cy="294" r="12"/><rect x="1124" y="352" width="24" height="24" rx="4"/></g>
+            <g font-size="15" fill="#2a2926"><text x="1178" y="290">Stoneware mug</text><text x="1178" y="360">Linen tea towel</text></g>
+            <g font-size="13" fill="#8e8981"><text x="1178" y="310">Qty 2</text><text x="1178" y="380">Qty 1</text></g>
+            <g fill="#4a4743"><rect x="1440" y="281" width="52" height="10" rx="3"/><rect x="1444" y="351" width="48" height="10" rx="3"/></g>
+            <line x1="1108" y1="416.5" x2="1492" y2="416.5" stroke="#dcd7cf"/>
+            <rect x="1108" y="434" width="262" height="48" rx="9" fill="#fff" stroke="#d6d1c9"/>
+            <text id="ph-promo-ph" x="1126" y="464" font-size="15" fill="#a39e96">Promo code</text>
+            <text id="ph-promo-val" x="1126" y="464" font-size="15" fill="#2a2926" letter-spacing="1"></text>
+            <rect x="1382" y="434" width="110" height="48" rx="9" fill="#dcd7cf"/>
+            <text x="1437" y="464" font-size="15" font-weight="600" fill="#2a2926" text-anchor="middle">Apply</text>
+            <g font-size="15" fill="#76716a"><text x="1108" y="528">Subtotal</text><text x="1108" y="560">Shipping</text></g>
+            <rect x="1432" y="518" width="60" height="10" rx="3" fill="#4a4743"/>
+            <rect id="ph-ship" x="1448" y="550" width="44" height="10" rx="3" fill="#4a4743"/>
+            <g id="ph-discount" opacity="0" font-size="15"><text x="1108" y="592" fill="#76716a">Discount · SPRING15</text><rect x="1438" y="582" width="54" height="10" rx="3" fill="#4a4743"/></g>
+            <line x1="1108" y1="614.5" x2="1492" y2="614.5" stroke="#dcd7cf"/>
+            <text x="1108" y="654" font-size="19" font-weight="650" fill="#2a2926">Total</text>
+            <rect id="ph-total" x="1416" y="640" width="76" height="14" rx="3" fill="#2a2926"/>
+            <rect id="ph-place" x="1108" y="678" width="384" height="60" rx="11" fill="#2a2926"/>
+            <text id="ph-place-label" x="1300" y="715" font-size="17" font-weight="600" fill="#f7f6f3" text-anchor="middle">Place order</text>
+            <g id="ph-placed-label" opacity="0">
+              <path d="M1236 708l6 6 12-13" fill="none" stroke="#f7f6f3" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="1264" y="715" font-size="17" font-weight="600" fill="#f7f6f3">Order placed</text>
+            </g>
+            <text id="ph-note" x="1300" y="776" font-size="13" fill="#8e8981" text-anchor="middle">Secure checkout</text>
+            <text id="ph-note-done" x="1300" y="776" font-size="14" fill="#2a2926" text-anchor="middle" opacity="0">Order #1042 · arrives in 2 days</text>
+            <text x="1108" y="870" font-size="14" fill="#8e8981">Questions about your order?</text>
+            <text x="1108" y="894" font-size="14" fill="#2a2926">Contact support</text>
+          </g>
+
+          <!-- dock -->
+          <rect x="532" y="928" width="536" height="60" rx="18" fill="#f1ede7" fill-opacity=".2"/>
+          <g fill="#f1ede7">
+            <rect x="548" y="937" width="42" height="42" rx="10" fill-opacity=".62"/><rect x="600" y="937" width="42" height="42" rx="10" fill-opacity=".4"/>
+            <rect x="652" y="937" width="42" height="42" rx="10" fill-opacity=".55"/><rect x="704" y="937" width="42" height="42" rx="10" fill-opacity=".3"/>
+            <rect x="756" y="937" width="42" height="42" rx="10" fill-opacity=".5"/><rect x="808" y="937" width="42" height="42" rx="10" fill-opacity=".36"/>
+            <rect x="860" y="937" width="42" height="42" rx="10" fill-opacity=".6"/><rect x="912" y="937" width="42" height="42" rx="10" fill-opacity=".42"/>
+            <rect x="964" y="937" width="42" height="42" rx="10" fill-opacity=".26"/><rect x="1016" y="937" width="42" height="42" rx="10" fill-opacity=".48"/>
+          </g>
+        </svg>
+        <!-- the recorded cursor + click ring: a sharp layer over the soft footage -->
+        <svg class="placeholder placeholder-fx" id="placeholder-fx" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" focusable="false">
+          <g id="ph-ring" opacity="0">
+            <circle id="ph-ring-a" cx="0" cy="0" r="8" fill="none" stroke="#1d1c1a" stroke-width="3.5"/>
+            <circle id="ph-ring-b" cx="0" cy="0" r="8" fill="none" stroke="#f7f6f3" stroke-width="1.5"/>
+          </g>
+          <g id="ph-cursor" transform="translate(620 405)">
+            <path d="M0 0v22.5l5.6-5.3 3.8 8.9 4-1.7-3.8-8.7h7.9z" transform="scale(1.3)" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/>
+          </g>
+        </svg>
+        <video class="stage-video" id="hero-video" autoplay muted loop playsinline preload="none" tabindex="-1" disableremoteplayback></video>
+      </div>
+      <div class="stage-cut" id="stage-cut"></div>
+      <div class="stage-dim"></div>
+      <div class="stage-hush"></div>
+      <div class="reticle" id="reticle"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><span class="reticle-z" id="reticle-z"></span></div>
+      <div class="stage-scrim"></div>
+    </div>
+
+    <!-- ================= nav ================= -->
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary">
+        <a class="brand" href="#top" aria-label="AutoCine, back to top">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8V5.5a2 2 0 012-2H8"/><path d="M16 3.5h2.5a2 2 0 012 2V8"/><path d="M20.5 16v2.5a2 2 0 01-2 2H16"/><path d="M8 20.5H5.5a2 2 0 01-2-2V16"/></g><circle cx="12" cy="12" r="3" fill="#ff2a2a"/></svg>
+          <span class="wordmark">AutoCine</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#search">Search demo</a></li>
+          <li><a href="#mcp">MCP</a></li>
+        </ul>
+        <div class="nav-end">
+          <a class="nav-text" href="#privacy">Local by design</a>
+          <a class="btn btn-light btn-sm" href="https://github.com/mctatge/autocine">View source<svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10.5M9 3.5 13.5 8 9 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ================= hero ================= -->
+    <main class="hero" id="main">
+      <p class="badge step-back">Early preview <span class="badge-v">0.1</span> · macOS</p>
+
+      <h1 class="headline step-back">Your screen, <em>directed.</em></h1>
+
+      <p class="lede step-back">
+        <strong>AutoCine records your Mac and gives every click a close-up.</strong>
+        The camera zooms toward each click and eases back out on a spring. Edit locally, or connect an MCP-capable AI client to find moments, write cuts and verify the result.
+      </p>
+
+      <a class="btn btn-light btn-lg step-back" href="#mcp">See the MCP workflow<svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8h10.5M9 3.5 13.5 8 9 12.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+
+      <form class="search" id="search" role="search" autocomplete="off" novalidate>
+        <label class="sr-only" for="search-input">Search a sample recording library by what was said</label>
+        <div class="bar" id="bar">
+          <input id="search-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" aria-describedby="search-help" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="Search a sample library by what was said">
+          <span class="ghost" aria-hidden="true"><span class="ghost-text" id="ghost-text"></span><span class="caret"></span></span>
+          <kbd class="slash-hint" aria-hidden="true" title="Press / to search">/</kbd>
+          <button class="submit" type="submit" aria-label="Jump to the top result">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4.5M4.8 9.5 10 4.3l5.2 5.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <p class="sr-only" id="search-help">Searches five sample takes by their transcripts. Use the up and down arrows to move through results, Enter to jump to one.</p>
+        <div class="results" id="results-panel" hidden>
+          <ul class="results-list" id="search-results" role="listbox" aria-label="Matching moments"></ul>
+          <div class="results-empty" id="results-empty" hidden></div>
+          <div class="results-foot">
+            <span>Sample library, 5 invented takes. Source recordings stay on your Mac.</span>
+            <span class="results-keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> move <kbd>↵</kbd> jump</span>
+          </div>
+        </div>
+      </form>
+
+      <p class="tagline" id="tagline">
+        <span class="tagline-text">Record everything. Find it by what you said.</span>
+        <span class="tagline-cap" id="caption" aria-hidden="true"></span>
+      </p>
+
+      <ul class="marks step-back" id="features" aria-label="What it does">
+        <li class="mark">
+          <svg class="brk" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+          <span class="mark-body"><span class="mark-title">Auto-zoom</span><span class="mark-sub"><span>Toward every click,</span> <span>on a spring</span></span></span>
+          <svg class="brk brk-r" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+        </li>
+        <li class="mark">
+          <svg class="brk" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+          <span class="mark-body"><span class="mark-title">On your Mac</span><span class="mark-sub"><span>No account.</span> <span>Takes stay local.</span></span></span>
+          <svg class="brk brk-r" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+        </li>
+        <li class="mark">
+          <svg class="brk" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+          <span class="mark-body"><span class="mark-title">MCP-native</span><span class="mark-sub"><span>Inspect, edit,</span> <span>preview, render</span></span></span>
+          <svg class="brk brk-r" viewBox="0 0 10 48" preserveAspectRatio="none" aria-hidden="true"><path d="M8.5 1.5H5A3.5 3.5 0 0 0 1.5 5v7M1.5 36v7A3.5 3.5 0 0 0 5 46.5h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+        </li>
+      </ul>
+
+      <!-- the take playing behind the hero: an honest label, its clock, the
+           camera's zoom plan, and a pause control (WCAG 2.2.2) -->
+      <div class="slate" id="slate">
+        <div class="lane" aria-hidden="true">
+          <span class="lane-zooms" id="lane-zooms"></span>
+          <span class="lane-track"><span class="lane-head" id="lane-head"><i></i></span></span>
+        </div>
+        <p class="slate-name" aria-hidden="true"><span class="slate-kind">Sample take</span><span class="slate-title"> · <span id="slate-title">Checkout flow walkthrough</span></span></p>
+        <p class="slate-sub" id="slate-sub" aria-hidden="true"></p>
+        <p class="slate-tc" aria-hidden="true"><span class="slate-z" id="slate-z" title="Camera zoom">1.00×</span><span id="slate-now">0:00</span> / <span id="slate-dur">0:38</span></p>
+        <button class="motion" id="motion" type="button" aria-pressed="false" aria-label="Pause background motion" title="Pause background motion">
+          <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5v9M10.5 3.5v9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3v9.4L12.6 8z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <section class="mcp-section" id="mcp" aria-labelledby="mcp-title">
+    <div class="mcp-intro">
+      <p class="section-kicker"><span></span> Local MCP server</p>
+      <h2 id="mcp-title">Let the model edit the take, not guess at the timeline.</h2>
+      <p class="mcp-deck">
+        AutoCine exposes the same non-destructive engine used by its editor
+        through standard MCP. Any compatible client can inspect structured
+        activity, locate spoken phrases, write an edit and look at the rendered
+        result before export.
+      </p>
+    </div>
+
+    <ol class="mcp-flow" aria-label="AI-assisted editing workflow">
+      <li>
+        <span class="step-no">01</span>
+        <strong>Orient</strong>
+        <code>describe_session</code>
+        <p>Read beats and existing edits before requesting individual frames.</p>
+      </li>
+      <li>
+        <span class="step-no">02</span>
+        <strong>Locate</strong>
+        <code>find_in_transcript</code>
+        <p>Resolve what was said to a source timestamp instead of guessing.</p>
+      </li>
+      <li>
+        <span class="step-no">03</span>
+        <strong>Edit</strong>
+        <code>add_cut · adjust_zoom</code>
+        <p>Write explicit, reversible decisions to the project's edit spec.</p>
+      </li>
+      <li>
+        <span class="step-no">04</span>
+        <strong>Verify</strong>
+        <code>preview_frame · render_video</code>
+        <p>See the real renderer's output, self-correct, then export.</p>
+      </li>
+    </ol>
+
+    <div class="mcp-boundary" id="privacy">
+      <p>
+        <strong>Know the boundary.</strong> AutoCine stores source recordings
+        and edit specs on your Mac and does not upload them itself. A connected
+        MCP client may send returned transcript excerpts, metadata or preview
+        frames to its configured model provider. That transfer follows the
+        client's data controls.
+      </p>
+      <p class="mcp-status">
+        Free and open source · Apache-2.0 · signed Mac download later
+      </p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p class="foot-brand" id="early-preview">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8V5.5a2 2 0 012-2H8"/><path d="M16 3.5h2.5a2 2 0 012 2V8"/><path d="M20.5 16v2.5a2 2 0 01-2 2H16"/><path d="M8 20.5H5.5a2 2 0 01-2-2V16"/></g><circle cx="12" cy="12" r="3" fill="#ff2a2a"/></svg>
+      <span>AutoCine 0.1, an experimental source release for macOS.</span>
+    </p>
+    <p class="foot-note"><a href="https://github.com/mctatge/autocine">Source on GitHub</a>. No account. Signed Mac download coming later.</p>
+  </footer>
+
+  <p class="sr-only" id="announce" role="status" aria-live="polite"></p>
+
+  <script src="demo-library.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# AutoCine — Python deps.
+# System dependency (not pip): ffmpeg  ->  brew install ffmpeg
+pynput>=1.7
+numpy>=1.21
+opencv-python-headless>=4.5
+pillow>=9
+# macOS display geometry (auto-installed as a pynput dependency; listed for clarity)
+pyobjc-framework-Quartz>=8 ; sys_platform == "darwin"
+# native frameless always-on-top recording bar (optional -- `studio.py bar`
+# falls back to a Chrome app window without it)
+pywebview>=5 ; sys_platform == "darwin"
+# ScreenCaptureKit capture backend (`--capture-backend sck`), imported ONLY by
+# the autocine/_sck_worker.py child process. Optional in the sense that the
+# default backend is avfoundation and never touches these -- but without them
+# `--capture-backend sck` cannot run at all, and nothing else pulls them in
+# (pynput brings Quartz only, and camera_preview reaches AVCaptureDevice
+# through objc.lookUpClass rather than a framework binding).
+# AVFoundation transitively brings CoreAudio; both it and ScreenCaptureKit
+# bring Cocoa, which is where the worker's AppKit/Foundation come from.
+pyobjc-framework-ScreenCaptureKit>=11 ; sys_platform == "darwin"
+pyobjc-framework-AVFoundation>=11 ; sys_platform == "darwin"
+pyobjc-framework-CoreMedia>=11 ; sys_platform == "darwin"

@@ -1,0 +1,52 @@
+<!--
+  Full-screen window picker. Opened as a SECOND native window by the bar
+  (studio_app._NativeBarApi.pick_windows), sized to the whole main display.
+
+  Why a canvas and not one div per window: the scrim has to have HOLES in it
+  — a lit window is lit because the dim is missing there, which is what makes
+  "this is what gets recorded" read instantly. Punching N holes is one
+  destination-out pass on a canvas and a pile of stacked box-shadows in DOM.
+  The DOM here is only the things that need to be text: the badges and the
+  HUD.
+
+  Coordinates are 1:1 with Quartz points. A frameless pywebview window
+  reports CSS px == points (see studio_app._NativeBarApi.bar_fit), and this
+  window is placed at the full NSScreen.frame(), whose top-left IS the origin
+  of the global top-left point space /api/windows reports rects in. picker.js
+  asserts that at boot and bails to the fallback picker if it ever stops
+  being true, rather than silently highlighting the wrong window.
+-->
+<link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/picker.css">
+
+<canvas id="pk-canvas"></canvas>
+<div id="pk-badges"></div>
+
+<div class="pk-hud" id="pk-hud">
+  <div class="pk-hud-main">
+    <span class="pk-hud-title" id="pk-title">Click windows to record</span>
+    <span class="pk-hud-count t-mono" id="pk-count">0 / 4</span>
+  </div>
+  <div class="pk-hud-warn" id="pk-warn" hidden>
+    <span class="pk-warn-dot"></span>
+    <span id="pk-warn-text"></span>
+  </div>
+  <label class="pk-arrange" id="pk-arrange-row" hidden>
+    <input type="checkbox" id="pk-arrange" checked>
+    <span>
+      <strong>Move them apart first</strong>
+      <em>The display is what actually gets captured, so a window on top is
+        recorded into the one underneath. This slides them apart before the
+        take and puts them back after.</em>
+    </span>
+  </label>
+  <div class="pk-hud-actions">
+    <span class="pk-keys t-cap"><kbd>esc</kbd> cancel</span>
+    <button type="button" class="pk-btn pk-btn-ghost" id="pk-clear">Full screen</button>
+    <button type="button" class="pk-btn pk-btn-go" id="pk-done" disabled>
+      Use these <kbd>⏎</kbd>
+    </button>
+  </div>
+</div>
+
+<script src="/picker.js"></script>

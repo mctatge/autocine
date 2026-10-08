@@ -1,0 +1,999 @@
+/* editor.css — the studio editor: stage + inspector rail + timeline */
+
+.ed-body {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 48px 1fr auto;
+  overflow: hidden;
+}
+
+/* ---------- top bar ---------- */
+.ed-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+.ed-top-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ed-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 8px 5px 4px;
+  border-radius: var(--r-ctl);
+}
+.ed-back:hover { color: var(--text); background: var(--surface-2); }
+.ed-back svg { width: 14px; height: 14px; }
+
+.ed-title-wrap { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ed-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+  cursor: text;
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.ed-title:hover { background: var(--surface-2); }
+.ed-title-wrap input {
+  font-size: 13.5px;
+  font-weight: 600;
+  width: 240px;
+}
+.ed-save-state { white-space: nowrap; }
+.ed-save-state.err { color: var(--err); }
+
+.ed-top-right { display: flex; align-items: center; gap: 6px; }
+.ed-top-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+.ed-newrec { display: inline-flex; align-items: center; gap: 7px; }
+.ed-newrec:hover .ed-newrec-dot { background: var(--rec-hover); }
+.ed-newrec-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rec); flex: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rec) 22%, transparent);
+}
+.ed-export-btn { padding: 7px 18px; margin-left: 2px; }
+#ed-preset { max-width: 150px; }
+
+/* ---------- main: stage / inspector / rail ---------- */
+.ed-main {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ed-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.ed-stage-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px 0;
+  height: 34px;
+}
+.ed-aspect-label { display: inline-flex; align-items: center; gap: 8px; }
+.ed-aspect-label select { padding: 3px 20px 3px 6px; font-size: 12px; }
+#ed-stage-note { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ed-zoom-readout { margin-left: auto; }
+
+/* record-time window capture: the stage is showing a CROP of the recording
+   (avfoundation can't target a window, so the crop happens at render time).
+   Footage-orange like the window-crop tool below — teal is the camera's. */
+.ed-window-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 340px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  background: rgba(224, 138, 60, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(224, 138, 60, 0.30);
+  color: rgba(255, 226, 195, 0.92);
+}
+.ed-window-chip .icon { color: var(--clip); flex: none; }
+.ed-window-chip-key {
+  font-family: var(--display);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 226, 195, 0.55);
+  flex: none;
+}
+.ed-window-chip-text {
+  font-size: 11px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "the window moved during recording" — same warning voice as the library's
+   permissions banner. Advisory, never blocking, so it's dismissable. */
+.ed-stage-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 20px 0;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--r-card);
+  background: rgba(224, 138, 60, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(224, 138, 60, 0.28);
+}
+.ed-stage-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ed-stage-banner-body strong { font-size: 12.5px; color: var(--warn); }
+.ed-stage-banner-body .t-label { font-size: 11.5px; line-height: 1.5; }
+.ed-stage-banner-x { margin-left: auto; flex: none; width: 24px; height: 24px; }
+.ed-stage-banner-x svg { width: 13px; height: 13px; }
+
+.ed-canvas-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px 18px;
+  min-height: 0;
+}
+.ed-canvas {
+  position: relative;
+  background: var(--inset);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 24px 64px rgba(0, 0, 0, 0.5);
+  max-width: 100%;
+  max-height: 100%;
+}
+.ed-frame-bg { position: absolute; inset: 0; }
+.ed-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.ed-viewport.framed { border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+#ed-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.ed-multi {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.ed-multi[hidden] { display: none; }
+/* Cards are only draggable while the Windows panel is open. Everywhere else
+ * the composite stays click-through, so it can't shadow the zoom-pin picker
+ * on the stage beneath it. */
+.ed-multi.is-draggable { pointer-events: auto; cursor: grab; }
+.ed-multi.is-draggable:active { cursor: grabbing; }
+.ed-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* contain, not fill: this still IS the export, and stretching it to whatever
+     shape the box happens to be is how a wrong box (see fitCanvas) stayed
+     invisible while playback -- which cannot stretch -- showed the truth. */
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+.ed-still.show { opacity: 1; }
+/* Always-on-top copy of the card selection frame + handles, so they are visible
+ * over the opaque still on a native/scene take whose live composite is not up
+ * (a cold or undecodable fleet). Click-through: the pointer still lands on
+ * .ed-multi below. See drawCardOverlay. */
+.ed-cardchrome {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}
+.ed-cardchrome[hidden] { display: none; }
+/* The facecam source element. Laid out (so the engine keeps decoding frames
+   for drawImage) but invisible and untouchable -- the bubble the user sees is
+   painted into .ed-multi by drawFaceBubble. */
+.ed-face-src {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ed-canvas.pin-arm { cursor: crosshair; }
+.ed-pin-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* the zoom target is a reticle — the camera aims here */
+.ed-pin-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--cam-bright);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+}
+.ed-pin-dot::before, .ed-pin-dot::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+.ed-pin-dot::before {
+  left: 50%;
+  top: -5px;
+  bottom: -5px;
+  width: 1.5px;
+  transform: translateX(-50%);
+}
+.ed-pin-dot::after {
+  top: 50%;
+  left: -5px;
+  right: -5px;
+  height: 1.5px;
+  transform: translateY(-50%);
+}
+.ed-canvas.winpick-arm { cursor: crosshair; }
+.ed-winpick-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 6;
+}
+/* the drag-in-progress crop box, drawn while picking a window region --
+   footage-orange (--clip), matching the semantic hue for clip/crop content
+   rather than teal (reserved for the camera/zoom system). */
+.ed-winpick-rect {
+  position: absolute;
+  border: 1.5px dashed var(--clip);
+  background: rgba(224, 138, 60, 0.14);
+  pointer-events: none;
+  z-index: 5;
+}
+/* The saved crop, drawn over the stage. The outside is dimmed by an
+   outsized spread shadow rather than four sibling elements, so the kept
+   region stays one rect that cannot drift out of register with its own
+   mask. Amber = footage, matching the crop-drag band above it. */
+.ed-crop-box {
+  position: absolute;
+  border: 1.5px solid var(--clip);
+  box-shadow: 0 0 0 9999px rgba(8, 7, 6, 0.55);
+  pointer-events: none;
+  z-index: 4;
+}
+.ed-canvas-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 24px;
+}
+
+/* ---------- inspector ---------- */
+.ed-inspector {
+  width: 272px;
+  flex: none;
+  border-left: 1px solid var(--line);
+  background: var(--surface-1);
+  overflow-y: auto;
+}
+.ed-panel { padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 4px; }
+.ed-panel h3 {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 2px 0 10px;
+}
+.ed-panel .sect {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.ed-panel .sect-cap {
+  margin-bottom: 8px;
+  display: block;
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-3);
+}
+.ed-slider-row { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
+.ed-slider-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ed-slider-val { font-family: var(--mono); font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ed-hint { font-size: 11px; color: var(--text-3); line-height: 1.5; margin-top: 2px; }
+.ed-panel input[type="text"] { width: 100%; }
+
+/* Transcript panel: the take as text. --clip is the FOOTAGE hue in this
+   editor's palette (clip track, waveform, chapters), and a spoken line is
+   footage, so a highlighted line reads as "the frame you are on" in the same
+   colour the clip lane already uses. */
+.ed-tx-actions { display: flex; margin-top: 8px; }
+.ed-tx-search { margin: 10px 0 6px; }
+.ed-tx-search input { width: 100%; }
+.ed-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 52vh;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.ed-tx-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ed-tx-line:hover { background: var(--surface-2); }
+.ed-tx-line.on { background: rgba(224, 138, 60, 0.14); }
+.ed-tx-t {
+  color: var(--text-3);
+  font-size: 10px;
+  flex: 0 0 auto;
+  min-width: 34px;
+}
+.ed-tx-line.on .ed-tx-t { color: var(--clip); }
+.ed-tx-text { color: var(--text); }
+
+/* Select-to-cut. The list owns the selection gesture, so the browser's own
+   text selection is off: two highlights disagreeing over the same words is
+   worse than one. `touch-action: pan-y` keeps a vertical flick scrolling
+   the list instead of dragging a selection. */
+.ed-tx-list {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.ed-tx-list:focus-visible { outline: 2px solid var(--cam-line); outline-offset: 2px; }
+.ed-tx-w { border-radius: 3px; padding: 0 1px; }
+.ed-tx-w.sel { background: var(--cam-deep); color: #fff; }
+/* Words the cut takes that were NOT highlighted — the recogniser gave them
+   one identical timestamp, so they can only leave together. Warned in
+   colour AND in words (the action bar says why); a tint alone would ask the
+   user to infer a data limitation. */
+.ed-tx-w.pending { background: rgba(224, 138, 60, 0.28); color: var(--text); }
+.ed-tx-w.cut { text-decoration: line-through; color: var(--text-3); }
+
+/* The action bar sits OUTSIDE the scrollable list so the verb stays on
+   screen no matter how far down the take the selection is. */
+.ed-tx-act { display: none; }
+.ed-tx-act.on {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.ed-tx-act button { flex: 0 0 auto; }
+.ed-tx-act-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.ed-tx-act-info .warn { color: var(--warn); }
+
+/* A .seg whose options don't fit beside their label: same capsule, laid out
+   on a six-column grid so every row ends flush with the panel instead of
+   wrapping wherever the text ran out. Spans are set per button in JS. */
+.seg-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  width: 100%;
+}
+.seg-grid button { padding: 5px 4px; text-align: center; }
+
+/* Paired actions on one thing (fit / reset) — equal halves, so neither reads
+   as the primary. */
+.ed-actions { display: flex; gap: 6px; margin-top: 8px; }
+.ed-actions button { flex: 1 1 0; min-width: 0; padding: 6px 4px; }
+
+/* Why "Fit to frame" is greyed out, in the readout voice rather than the
+   hint voice — it is a live state, not an explanation, and it sits between
+   the button and the paragraph that explains what the button is for.
+   `hidden` on the element is what removes it; there is no empty state. */
+.ed-fit-note { font-family: var(--mono); font-size: 10px; color: var(--text-3); }
+.ed-color-row { display: flex; gap: 8px; align-items: center; }
+.ed-color-row input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--inset);
+  cursor: pointer;
+}
+
+/* ---------- icon rail ---------- */
+.ed-rail {
+  width: 52px;
+  flex: none;
+  border-left: 1px solid var(--line);
+  background: var(--surface-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 12px;
+}
+.ed-rail-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+  border-radius: 9px;
+}
+.ed-rail-btn:hover { background: var(--surface-2); color: var(--text); border-color: transparent; }
+.ed-rail-btn.on { color: var(--cam-bright); background: var(--cam-soft); }
+.ed-rail-btn.on::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--cam);
+}
+.ed-rail-btn svg { width: 17px; height: 17px; }
+
+/* ---------- timeline ---------- */
+.ed-timeline {
+  border-top: 1px solid var(--line);
+  background: var(--surface-1);
+  padding: 6px 14px 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ed-transport {
+  display: flex;
+  align-items: center;
+  height: 38px;
+}
+.ed-transport-left { flex: 1; display: flex; align-items: baseline; gap: 6px; }
+.ed-time { font-size: 13.5px; font-weight: 500; }
+.ed-time-total { font-size: 11px; color: var(--text-3); }
+.ed-transport-center { display: flex; align-items: center; gap: 4px; }
+.ed-play {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border-color: var(--line-strong);
+}
+.ed-play:hover { background: #35322c; }
+.ed-play svg { width: 15px; height: 15px; }
+.ed-transport-right { flex: 1; display: flex; justify-content: flex-end; gap: 4px; }
+
+.ed-tl {
+  position: relative;
+  cursor: default;
+}
+.ed-ruler {
+  display: block;
+  width: 100%;
+  height: 26px;
+  cursor: ew-resize;
+}
+.ed-lane { position: relative; margin-top: 4px; border-radius: 7px; }
+.ed-clip-lane { height: 46px; background: var(--inset); }
+.ed-zoom-lane { height: 38px; background: var(--inset); }
+.ed-suppress-lane { height: 18px; background: var(--inset); }
+.ed-marker-lane { height: 24px; background: transparent; }
+
+/* lane tags — machine lettering on the deck; sit under the content */
+.ed-lane-tag {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* the camera line — the planned zoom path drawn from the real camera plan */
+.ed-cam {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* clip track */
+.ed-clip-bar {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(224, 138, 60, 0.30), rgba(224, 138, 60, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(224, 138, 60, 0.5);
+  overflow: hidden;
+}
+.ed-wave { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ed-clip-label {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 226, 195, 0.92);
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.ed-trim-dim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(13, 12, 11, 0.65);
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 7px;
+}
+/* Cut (ripple delete) ranges: struck from the export. Hatched so they read
+   as "removed", distinct from the plain trim dim. Read-only in v1. */
+.ed-cut-dim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+      -45deg,
+      rgba(13, 12, 11, 0.72) 0 6px,
+      rgba(196, 92, 74, 0.30) 6px 9px);
+  z-index: 3;
+  pointer-events: none;
+}
+.ed-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ed-trim-handle::after {
+  content: "";
+  width: 4px;
+  height: 60%;
+  border-radius: 2px;
+  background: rgba(255, 216, 173, 0.95);
+}
+.ed-trim-left { left: -2px; }
+.ed-trim-right { right: -2px; }
+
+/* zoom + suppress blocks */
+.ed-block {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 6px;
+  cursor: grab;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-width: 10px;
+  z-index: 1;   /* above the camera line + lane tag */
+}
+.ed-block:active { cursor: grabbing; }
+.ed-block-zoom {
+  background: linear-gradient(180deg, rgba(63, 191, 178, 0.42), rgba(46, 148, 138, 0.34));
+  box-shadow: inset 0 0 0 1px rgba(92, 217, 204, 0.55);
+}
+/* no-zoom: neutral zebra — "camera inactive here"; red stays recording-only */
+.ed-block-suppress {
+  background: repeating-linear-gradient(-45deg,
+      rgba(244, 241, 236, 0.15) 0 5px, rgba(244, 241, 236, 0.05) 5px 10px);
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 236, 0.22);
+  border-radius: 4px;
+}
+/* selection is a white outline, like a clip selected in an NLE */
+.ed-block.selected {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.95), 0 0 0 1.5px rgba(244, 241, 236, 0.75);
+}
+.ed-block-label {
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(244, 241, 236, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.ed-block-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 2;
+}
+.ed-block-handle.l { left: 0; }
+.ed-block-handle.r { right: 0; }
+.ed-block-handle::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  width: 2.5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.ed-block:hover .ed-block-handle::after, .ed-block.selected .ed-block-handle::after { opacity: 1; }
+
+/* markers */
+.ed-marker {
+  position: absolute;
+  top: 1px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: grab;
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 2;
+}
+.ed-marker::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--clip);   /* chapters segment the footage */
+  flex: none;
+}
+.ed-marker.selected {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 1.5px rgba(244, 241, 236, 0.55);
+}
+
+/* playhead — neutral white: color belongs to the camera and footage, not the transport */
+.ed-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.ed-playhead::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 0;
+  left: -0.75px;
+  width: 1.5px;
+  background: rgba(244, 241, 236, 0.92);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.6);
+}
+.ed-playhead-dot {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f4f1ec;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+}
+
+/* marker popover */
+.ed-marker-pop {
+  position: fixed;
+  z-index: 70;
+  width: 250px;
+  background: var(--surface-3);
+  border-radius: var(--r-card);
+  box-shadow: var(--ring-pop);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: menu-in 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.ed-marker-pop-sum { line-height: 1.5; min-height: 14px; }
+.ed-marker-pop-row { display: flex; justify-content: space-between; margin-top: 4px; }
+
+/* export modal bits */
+.ex-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--inset);
+}
+.ex-spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--surface-3);
+  border-top-color: var(--cam);
+  animation: spin 0.9s linear infinite;
+}
+.ex-spinner.done { border-color: var(--ok); animation: none; }
+.ex-spinner.err { border-color: var(--err); animation: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ex-actions { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+
+/* Tactical telemetry skin. Kept at the end so it can reshape the chrome
+   without touching timeline geometry or preview math. */
+.ed-body {
+  background: var(--bg);
+}
+.ed-top {
+  min-height: 52px;
+  border-bottom-color: var(--line-strong);
+  background: var(--surface-1);
+}
+.ed-back,
+.ed-title,
+.ed-window-chip,
+.ed-stage-banner,
+.ed-pin-hint,
+.ed-winpick-hint,
+.ed-tx-line,
+.ed-tx-w,
+.ed-tx-act,
+.ed-color-row input[type="color"],
+.ed-rail-btn,
+.ed-play,
+.ed-lane,
+.ed-clip-bar,
+.ed-trim-dim,
+.ed-trim-handle::after,
+.ed-block,
+.ed-block-suppress,
+.ed-block-handle::after,
+.ed-marker,
+.ed-marker::before,
+.ed-marker-pop,
+.ex-status,
+.ex-spinner {
+  border-radius: var(--r-ctl);
+}
+.ed-title,
+.ed-save-state,
+.ed-stage-tools,
+.ed-panel .sect-cap,
+.ed-lane-tag,
+.ed-marker,
+.ed-clip-label,
+.ed-time,
+.ed-time-total {
+  font-family: var(--mono);
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+.ed-title {
+  font-size: 12px;
+  font-weight: 700;
+  max-width: 360px;
+}
+.ed-title:hover,
+.ed-back:hover,
+.ed-rail-btn:hover {
+  background: rgba(255, 42, 42, 0.08);
+}
+.ed-newrec-dot,
+.ed-playhead-dot {
+  border-radius: 50%;
+  box-shadow: none;
+}
+.ed-newrec-dot {
+  width: 9px;
+  height: 9px;
+}
+.ed-stage-tools {
+  height: 38px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.ed-canvas-wrap {
+  padding: 18px 20px 20px;
+  background: var(--bg);
+}
+.ed-canvas {
+  border-radius: var(--r-card);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+}
+.ed-viewport.framed {
+  border-radius: var(--r-card);
+  box-shadow: none;
+}
+.ed-pin-hint,
+.ed-winpick-hint {
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+}
+.ed-pin-dot {
+  border-radius: 50%;
+  border-color: var(--rec);
+}
+.ed-inspector,
+.ed-rail,
+.ed-timeline {
+  background: var(--surface-1);
+}
+.ed-panel h3 {
+  font-size: 18px;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.ed-panel .sect {
+  border-top-color: var(--line-strong);
+}
+.ed-panel .sect-cap {
+  color: var(--text-3);
+}
+.ed-rail {
+  gap: 1px;
+  padding-top: 10px;
+  border-left-color: var(--line-strong);
+}
+.ed-rail-btn {
+  width: 42px;
+  height: 36px;
+}
+.ed-rail-btn.on {
+  color: var(--bg);
+  background: var(--rec);
+}
+.ed-rail-btn.on::after {
+  right: -8px;
+  width: 4px;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rec);
+}
+.ed-timeline {
+  border-top-color: var(--line-strong);
+  padding-top: 8px;
+}
+.ed-play {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+.ed-play:hover {
+  background: var(--rec);
+  color: var(--bg);
+}
+.ed-lane {
+  border: 1px solid var(--line);
+  background: var(--inset);
+}
+.ed-clip-lane,
+.ed-zoom-lane,
+.ed-suppress-lane {
+  background: var(--inset);
+}
+.ed-clip-bar {
+  background: rgba(217, 155, 74, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(217, 155, 74, 0.7);
+}
+.ed-block-zoom {
+  background: rgba(89, 199, 189, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(133, 238, 229, 0.62);
+}
+.ed-marker {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.ed-marker-pop {
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--ring-pop);
+}
+.ex-status {
+  border: 1px solid var(--line);
+}

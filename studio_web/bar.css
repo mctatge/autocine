@@ -1,0 +1,775 @@
+/* bar.css - the floating recording pill
+
+   Look: the landing page's nav + prompt bar (site/styles.css) carried onto
+   the pill. Every picker is a glass CHIP (rounded rect, translucent fill,
+   hairline rim + top highlight, like the landing's nav links) holding a
+   system-sans value (the prompt bar's voice) over a DIN caps caption; the
+   close / notes / pause buttons are round glass buttons (the landing's round
+   submit). White FILL is reserved for the primary action (Open in Editor,
+   the landing's white CTA + arrow) and a checked box's tick tile; anything
+   that is ON (a picked window, a toggle, pressed notes) is LIT instead --
+   brighter fill + rim, white caption. Red means RECORDING and nothing else:
+   the record disc, the stop disc and the live dot. No serif, no animated
+   background, no glow, no hue beyond ui.css's.
+   A chip only lights on hover where it RESPONDS: the value row of a select
+   chip (its caption + padding are drag surface), the whole toggle chip (its
+   checkbox is stretched over it).
+   Two materials, one design: html.native.glass (the native vibrancy is live)
+   swaps the tokens below for the measured Frost values; everywhere else
+   (AUTOCINE_NO_VIBRANCY=1, a failed install, the plain browser popup) the
+   same chips sit on an opaque #0e0e0e pill. */
+
+/* Transparent slack around the pill so its drop shadow isn't clipped by the
+   native window edge. MUST match bar_native.SHADOW_PAD — the Python side
+   assumes the pill is centered horizontally and sits exactly --bar-pad below
+   the window's top edge, which is what keeps it still while faces resize the
+   window. The shadow below must stay inside this pad. */
+:root { --bar-pad: 28px; }
+
+.bar-body {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;           /* MUST match bar_native.BODY_GAP */
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* native pywebview window: fully transparent backdrop so only the pill shows.
+   Top-anchored + padded, so the window can be fitted to the content (bar.js
+   reportFit -> api.bar_fit) without the pill drifting. */
+html.native, html.native body { background: transparent; }
+html.native .bar-body {
+  justify-content: flex-start;
+  padding: var(--bar-pad);
+}
+
+.bar-pill {
+  /* the bar's own tokens -- every control below reads these, and the glass
+     rule further down swaps them, so the two materials can't drift apart */
+  --chip: rgba(234, 234, 234, 0.06);          /* a control at rest ON the pill (landing nav link) */
+  --chip-hover: rgba(234, 234, 234, 0.11);
+  --chip-on: rgba(234, 234, 234, 0.17);       /* picked window / toggle on */
+  --chip-rim: rgba(234, 234, 234, 0.1);
+  --chip-rim-hover: rgba(234, 234, 234, 0.2);
+  --chip-top: rgba(234, 234, 234, 0.07);      /* hairline top highlight */
+  --round: rgba(234, 234, 234, 0.11);         /* round glass button (landing submit) */
+  --round-hover: rgba(234, 234, 234, 0.2);
+  --round-on: rgba(234, 234, 234, 0.24);      /* pressed notes: lit, not white */
+  --round-on-rim: rgba(234, 234, 234, 0.62);
+  --paper: #f2f2f0;                           /* the landing's white CTA */
+  /* the toggles' check box, drawn here (the native checkbox was an opaque
+     dark well on glass and an orange tile when checked): an outlined 14px
+     rounded square at rest, a paper tile with a dark tick when checked */
+  --box-off: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Crect x='.75' y='.75' width='12.5' height='12.5' rx='3.5' fill='none' stroke='rgba(234,234,234,0.62)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --box-on: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Crect width='14' height='14' rx='4' fill='%23f2f2f0'/%3E%3Cpath d='M3.6 7.3l2.3 2.2 4.6-4.9' fill='none' stroke='%230a0a0a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --value: var(--text);
+  --ring: var(--text);                        /* keyboard focus: white, like the landing */
+  --text-3: var(--text-small);                /* 10-11px caps need >= 4.5:1 (0.46 is ~4:1) */
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='rgba(240,240,240,0.72)' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 76px;
+  flex: none;        /* never let a too-short window squash the pill — its
+                        measured height is what sizes that window */
+  /* ...nor its width: the pill is measured inside the current window, so a
+     face that is wider than the last one must still report its full width */
+  min-width: -webkit-max-content;
+  min-width: max-content;
+  /* concentric with the capsule: the 36px close button sits (76-36)/2 in,
+     the 50px record disc (76-50)/2 */
+  padding: 0 13px 0 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(234, 234, 234, 0.14);
+  /* opaque: at the old 0.97 the text of whatever sat behind the pill ghosted
+     through it on a dark desktop */
+  background: #0e0e0e;
+  box-shadow:
+    inset 0 1px 0 rgba(234, 234, 234, 0.08),  /* hairline top highlight */
+    0 10px 18px rgba(0, 0, 0, 0.55);          /* 10 + 18 = 28 = --bar-pad */
+  -webkit-app-region: no-drag;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* drag-anywhere: the whole pill is the window's drag surface. Controls opt
+   out in JS (capture-phase stopPropagation), and the picker captions/icons
+   opt out here so the padding around a <select> drags instead of forwarding
+   the click into the select. */
+html.native .bar-pill {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+html.native .bar-pill.dragging { cursor: grabbing; }
+html.native .bar-picker-label,
+html.native .bar-picker-icon { pointer-events: none; }
+
+/* Frosted glass. backdrop-filter can't blur the desktop behind a transparent
+   native window (it only blurs page content), so bar_native.Glass puts a real
+   NSVisualEffectView (HUD material, behind-window blur) under the pill and the
+   hint strip, masked to these capsules and inset 1px under the border. bar.js
+   adds html.glass only once the views exist (bar_fit's reply, or bar_native's
+   GLASS_ON_JS on a lazy install), so everything here is a TINT over real
+   blur -- never a see-through pill over nothing -- and without .glass the
+   opaque pill above is the whole look.
+   "Frost" (chosen by the user on the real pill, 2026-09-27): a light 0.46
+   tint + a top sheen, so the blur actually shows -- the old 0.82 tint hid it,
+   and over a dark desktop no blur can show at all. Legibility is set by the
+   WORST backdrop, a white desktop (the HUD glass alone reads ~#a5a5a5
+   there; this tint lands the pill at ~#626262-#6e6e6e), measured on the real
+   pill with screencapture: that is why text on glass is WHITE -- values
+   #fff, captions 0.92, notes 0.97 -- and why the timer and countdown are
+   white too (red text cannot reach 4.5:1 on this pill over white; the red
+   DISCS and the live dot stay --rec). The chips' fill is a DARK grey, not
+   white, for the same reason (below). Measured numbers: docs/architecture.md,
+   Native shell (`Glass`). Re-measure before changing any value here.
+   Nothing here may change a measured size (bar_native frames the glass off the
+   pill's box), and every outer shadow must stay inside --bar-pad:
+   y-offset + blur <= 28px below, blur - y-offset above. */
+html.native.glass .bar-pill {
+  --text: #fff;
+  --value: #fff;
+  --text-2: rgba(240, 240, 240, 0.97);
+  --text-3: rgba(240, 240, 240, 0.92);
+  /* chip fills on glass are a translucent DARK grey, darker than the pill's
+     own ground over a white desktop (~#646464): over a dark desktop they
+     LIFT the chip like the landing's white-alpha fill, over a bright one
+     they RECESS it -- visible either way, and a darker ground under white
+     text raises its contrast (a white 0.045 fill cost the captions
+     4.8 -> 4.4:1 there; a mid-grey one simply vanished) */
+  --chip: rgba(72, 72, 72, 0.3);
+  --chip-hover: rgba(88, 88, 88, 0.38);
+  --chip-on: rgba(88, 88, 88, 0.38);
+  --chip-rim: rgba(255, 255, 255, 0.12);
+  --chip-rim-hover: rgba(255, 255, 255, 0.34);
+  --chip-top: rgba(255, 255, 255, 0.08);
+  --round: rgba(255, 255, 255, 0.12);
+  --round-hover: rgba(255, 255, 255, 0.22);
+  --round-on: rgba(255, 255, 255, 0.26);
+  --round-on-rim: rgba(255, 255, 255, 0.7);
+  --box-off: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Crect x='.75' y='.75' width='12.5' height='12.5' rx='3.5' fill='none' stroke='rgba(255,255,255,0.86)' stroke-width='1.5'/%3E%3C/svg%3E");
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='rgba(255,255,255,0.86)' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 58%),
+    rgba(18, 18, 20, 0.46);
+  border-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),  /* the landing's top highlight */
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 6px 22px rgba(0, 0, 0, 0.36);           /* 6 + 22 = 28 = --bar-pad */
+}
+
+.bar-face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* nowrap + no shrinking: the pill is measured INSIDE the current window,
+     so a face that can wrap is squeezed to the previous face's width (the
+     done face used to come up three lines tall in a recording-wide window)
+     and bar_fit never learns it wanted more room */
+  white-space: nowrap;
+}
+.bar-face > * { flex-shrink: 0; }
+.bar-face[hidden] { display: none; }
+.bar-face-center { gap: 10px; padding: 0 6px 0 0; }
+
+/* group divider: SPACE only, like the landing nav -- every group is already
+   bounded by its own rimmed chip or round button, so a stroke here was one
+   more vertical line in a row of rims. The box stays (1px + 5px margins) so
+   the pill's geometry, and bar_fit's numbers, don't move. */
+.bar-sep {
+  width: 1px;
+  height: 26px;
+  background: transparent;
+  margin: 0 5px;
+  flex: none;
+}
+
+/* ---- round glass buttons: close, notes, pause, re-pick ----
+   the landing's round submit, sized to the pill */
+.bar-close,
+.bar-notes,
+.bar-pause {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--round);
+  box-shadow: inset 0 0 0 1px var(--chip-rim), inset 0 1px 0 var(--chip-top);
+  color: var(--text);
+  flex: none;
+  transition: background-color 0.2s ease, color 0.2s ease,
+              transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-close svg,
+.bar-notes svg { width: 15px; height: 15px; }
+.bar-pause svg { width: 14px; height: 14px; }
+.bar-close:hover,
+.bar-notes:hover,
+.bar-pause:hover { background: var(--round-hover); border-color: transparent; color: var(--text); }
+.bar-close:active,
+.bar-notes:active,
+.bar-pause:active,
+.bar-record:active,
+.bar-stop:active { transform: scale(0.94); }
+
+/* Notes toggle. Pressed (aria-pressed, driven by bar.js) = LIT, like a
+   picked chip: a brighter fill under a bright ring, white glyph. Not white
+   (a paper disc 6px from the record button outshone it -- the scratchpad is
+   secondary) and not red (red is the recording signal; the overlay records
+   nothing). */
+.bar-notes.active,
+.bar-notes[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--round-on);
+  box-shadow: inset 0 0 0 1.5px var(--round-on-rim);
+}
+.bar-notes.active:hover,
+.bar-notes[aria-pressed="true"]:hover { background: var(--round-on); color: var(--text); }
+
+/* ---- pickers: glass chips ----
+   [icon] Value  ⌄
+   CAPTION
+   A grid, so the icon rides the value row and the caption spans under both.
+   The chip itself stays a plain <div> (bar.html: a <label> would forward
+   clicks into the select and fight the drag), so its padding and caption are
+   drag surface and only the value row opens the menu, as before. */
+.bar-picker {
+  display: grid;
+  /* `auto 1fr`, never minmax(0, ...): a chip whose min-content can collapse
+     lets the pill be squeezed to the CURRENT window width, and then bar_fit
+     never learns it needed a wider one (the pill just clips) */
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icon value" "cap cap";
+  align-items: center;
+  align-content: center;
+  row-gap: 3px;
+  height: 50px;
+  min-width: 84px;
+  padding: 0 11px 0 12px;
+  border-radius: 13px;
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--chip-rim), inset 0 1px 0 var(--chip-top);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* `display: grid` above is an author rule and outranks the UA [hidden] rule,
+   so without this a bare `hidden` attribute does nothing to a picker (this bit
+   the window picker). bar.js ALSO writes an inline display -- deliberate
+   belt-and-braces, because the native bar is a WKWebView that has been seen
+   serving a stale cached bar.css across relaunches. */
+.bar-picker[hidden] { display: none; }
+/* hover lift -- only while the pointer is on the part that RESPONDS (the
+   select / window button row, or a toggle's stretched checkbox): fill and
+   rim brighten, the caption goes white (the landing's hover brightens its
+   text), a hairline shadow. Over a chip's caption or padding the pointer is
+   on drag surface (cursor: grab), so the chip stays at rest there. No
+   translate -- a chip that moves under the pointer flickers at its edge. */
+.bar-picker:has(select:enabled:hover, .bar-window-btn:hover, .bar-toggle-input:hover) {
+  background: var(--chip-hover);
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), inset 0 1px 0 var(--chip-top),
+              0 1px 3px rgba(0, 0, 0, 0.22);
+}
+.bar-picker:has(select:enabled:hover, .bar-window-btn:hover, .bar-toggle-input:hover) .bar-picker-label {
+  color: var(--text);
+}
+/* a picked window / a toggle that's on: the chip stays LIT -- brighter
+   fill + rim, white caption (the fill alone may not show over a bright
+   desktop). `.bar-pill` + the doubled class outrank the hover rule above,
+   so hovering a lit chip never dims it back to the hover fill. */
+.bar-pill .bar-picker:has(.bar-window-btn.is-set),
+.bar-pill .bar-picker.bar-toggle.is-on {
+  background: var(--chip-on);
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), inset 0 1px 0 var(--chip-top);
+}
+.bar-picker:has(.bar-window-btn.is-set) .bar-picker-label,
+.bar-toggle.is-on .bar-picker-label { color: var(--text); }
+.bar-pill .bar-picker:has(.bar-window-btn.is-set):has(.bar-window-btn:hover),
+.bar-pill .bar-picker.bar-toggle.is-on:has(.bar-toggle-input:hover) {
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), inset 0 1px 0 var(--chip-top),
+              0 1px 3px rgba(0, 0, 0, 0.22);
+}
+/* keyboard focus: ONE white ring round the whole chip. An outline, not a
+   box-shadow, so no hover / lit rule (all box-shadows) can take it away;
+   the control inside draws none (the window button is excluded from the
+   pill-wide button ring below, the select and checkbox set outline: none). */
+.bar-picker:has(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.bar-picker-icon {
+  grid-area: icon;
+  display: flex;
+  margin-right: 6px;
+  color: var(--text-3);
+}
+.bar-picker-icon svg { width: 13px; height: 13px; }
+
+.bar-picker select {
+  grid-area: value;
+  /* start, not stretch: the chevron trails every value by the same 15px
+     ('3s ⌄' used to sit ~30pt from its chevron under a wide caption) */
+  justify-self: start;
+  /* as wide as the CHOSEN option, not the longest one (where supported;
+     elsewhere the select keeps its longest-option width, capped here).
+     The cap is sized to REAL device names, because WebKit ignores
+     text-overflow on a <select>: a longer value is cut mid-glyph at the
+     chevron, never ellipsized. 180px holds this Mac's "MacBook Air
+     Microphone" / "Microsoft Teams Audio" / "FaceTime HD Camera" and
+     "MacBook Pro Microphone" (~172px at this face); only a longer name
+     (e.g. "<name>'s iPhone Microphone") still clips. */
+  field-sizing: content;
+  max-width: 180px;
+  height: 18px;
+  padding: 0 15px 0 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: var(--chevron);
+  background-position: right 1px center;
+  text-align: left;
+  text-align-last: left;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: -0.005em;
+  color: var(--value);
+  cursor: pointer;
+}
+/* locked (bar.js disables the Capture picker when AUTOCINE_CAPTURE_BACKEND
+   drives the engine; its title says why): dimmed with its chevron, no
+   pointer, and the chip never lifts (the hover rule wants :enabled). WebKit
+   has no UA dimming for a disabled appearance:none select -- it rendered
+   exactly like an editable one. */
+.bar-picker select:disabled { opacity: 0.55; cursor: default; }
+/* the chip draws the focus ring (:has above); this is the no-:has fallback */
+.bar-picker select:focus-visible { border: none; outline: none; text-decoration: underline; }
+.bar-picker:has(:focus-visible) select:focus-visible { text-decoration: none; }
+
+/* The window control in overlay mode: a button, not a select, because it
+ * opens a full-screen picker rather than a list. Styled exactly like the
+ * selects beside it (value face + chevron) so swapping between the two
+ * controls doesn't jog the pill. Undoes ui.css's mono caps button. */
+.bar-window-btn {
+  grid-area: value;
+  justify-self: start;       /* same chevron distance as the selects */
+  max-width: 124px;          /* a button DOES ellipsize (window titles are long) */
+  height: 18px;
+  padding: 0 15px 0 0;
+  border: none;
+  border-radius: 0;
+  background: transparent var(--chevron) no-repeat right 1px center;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  text-align: left;
+  color: var(--value);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: none;
+}
+.bar-window-btn:hover { background: transparent var(--chevron) no-repeat right 1px center; color: var(--value); }
+.bar-window-btn:active { transform: none; }
+.bar-window-btn.is-set { font-weight: 650; }
+.bar-window-btn:focus-visible { outline: none; }
+.bar-window-btn[hidden] { display: none; }
+/* Only one of the two ever shows; the UA rule needs help here for the same
+ * reason .bar-picker[hidden] does — an author `display` outranks it. */
+.bar-picker select[hidden] { display: none; }
+
+/* caption: the display voice, caps with tight tracking (landing nav) */
+.bar-picker-label {
+  grid-area: cap;
+  justify-self: start;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Occlusion-free / auto-add toggles: one row, [box] CAPTION, in a chip of the
+   same height, and the WHOLE chip toggles. The <input> itself is stretched
+   over the chip (still an <input>, so bar.js's capture-phase drag guard
+   leaves it alone, and still the only control -- no <label>) and paints the
+   box as its own background at the left; the chip's left padding reserves
+   the box's 14px + 7px so the width is what it was. Before, only the 14px
+   box responded: a press on the caption or padding started a window drag
+   (the caption is pointer-events: none in the native bar), under a chip
+   whose pointer cursor and hover lift promised a toggle.
+   Pressed = the paper tick tile (the same paper as the primary CTA); the
+   lit chip carries the on state. */
+.bar-toggle {
+  position: relative;
+  grid-template-columns: auto;
+  grid-template-areas: "cap";
+  padding-left: 33px;          /* 12px chip padding + 14px box + 7px gap */
+}
+.bar-toggle-input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: var(--box-off) no-repeat 12px center / 14px 14px;
+  cursor: pointer;
+}
+.bar-toggle-input:checked { background-image: var(--box-on); }
+/* the chip draws the ring (.bar-picker:has(:focus-visible)); ui.css would
+   otherwise tint a focused input's border red */
+.bar-toggle-input:focus-visible { outline: none; border: none; }
+/* two lines at a FIXED width: as narrow as the old stacked toggles, and a
+   fixed width keeps min-content == max-content (see .bar-face) */
+.bar-toggle .bar-picker-label {
+  width: 66px;
+  white-space: normal;
+}
+
+/* ---- facecam slot — the bubble doubles as the pop-out / dock-back button */
+.bar-cam-slot {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  /* deliberately NOT border-radius: 50% — that clips hit-testing to the disc,
+     and the badge lives in the square's bottom-right corner. The visible
+     circle is .bar-cam-preview; this button is just the click target. */
+  background: transparent;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bar-cam-slot[hidden] { display: none; }
+.bar-cam-slot:hover { background: transparent; border-color: transparent; }
+
+.bar-cam-preview {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: block;
+  background: var(--inset);
+  border: 1px solid var(--chip-rim-hover);
+  box-shadow: inset 0 1px 0 var(--chip-top);
+}
+.bar-cam-preview[hidden] { display: none; }
+.bar-cam-preview video,
+.bar-cam-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);   /* mirror, like every webcam self-view */
+  display: block;
+}
+.bar-cam-preview video[hidden],
+.bar-cam-preview img[hidden] { display: none; }
+/* The video covers the whole button. WebKit media elements swallow clicks
+   (their shadow DOM hit-tests first), which left the pop-out button dead in
+   the native pill even though it worked in Chromium — so make the bubble's
+   innards transparent to hit-testing and let the <button> take every click. */
+.bar-cam-preview,
+.bar-cam-preview video,
+.bar-cam-preview img,
+.bar-cam-detached,
+.bar-cam-badge { pointer-events: none; }
+
+/* stand-in shown in the pill while the bubble is floating on its own: an
+   empty glass socket (dashed rim), not red -- nothing here is recording */
+.bar-cam-detached {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  border: 1px dashed var(--text-3);
+  background: var(--chip);
+}
+.bar-cam-detached[hidden] { display: none; }
+.bar-cam-detached svg { width: 16px; height: 16px; }
+
+/* corner affordance: pop out (docked) / dock back (floating) -- a small
+   round glass button riding the bubble's edge */
+.bar-cam-badge {
+  position: absolute;
+  right: 0;          /* inside the button's box, so clicks on it still land */
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: #262626;
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* always visible, not hover-only: this is the only affordance for popping
+     the facecam out, and hiding it made the feature undiscoverable */
+  opacity: 0.92;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+.bar-cam-badge svg { width: 10px; height: 10px; }
+.bar-cam-slot:hover .bar-cam-badge,
+.bar-cam-slot:focus-visible .bar-cam-badge { opacity: 1; background: #333; }
+.bar-cam-slot.detached .bar-cam-badge {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+/* ---- the record button — the one thing that matters ----
+   a round glass button (the landing's submit) carrying the red disc; the
+   red ring keeps it readable as RECORD at a glance, on any backdrop */
+.bar-record {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--round);
+  box-shadow: inset 0 0 0 1.5px var(--rec);
+  flex: none;
+  transition: background-color 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-record-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--rec);
+  transition: transform 140ms ease;
+}
+.bar-record:hover { background: var(--round-hover); }
+.bar-record:hover .bar-record-dot { transform: scale(1.06); }
+.bar-record:disabled { opacity: 0.4; }
+.bar-record:disabled:hover { background: var(--round); }
+
+/* every control on the pill: a white focus ring (red is the recording).
+   Not the window button: its chip draws the ring (a second, square one
+   nested inside the chip's was the result). */
+.bar-pill button:not(.bar-window-btn):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ---- faces' text + buttons ---- */
+.bar-face .t-label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-2);
+}
+
+/* countdown face — big deck numerals, white (see the glass note) */
+.bar-count {
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  padding-top: 3px;          /* DIN sits high; optically centre it */
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  /* no min-width: a 40px box round a ~17px numeral left it floating 33pt in
+     with a 22pt gap to the note. Tabular digits keep 3 -> 2 -> 1 the same
+     width; a 10s countdown re-fits once, at 10 -> 9 (ResizeObserver). */
+  margin-right: 4px;         /* numeral -> note = 14px, a hair more than the face gap */
+}
+
+/* text buttons on the pill: glass chips in the display voice (landing nav
+   links); the primary one is the landing's white CTA */
+.bar-face .btn-quiet,
+.bar-face .btn-primary {
+  height: 34px;
+  padding: 2px 14px 0;
+  border: none;
+  border-radius: 9px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.bar-face .btn-quiet {
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--chip-rim), inset 0 1px 0 var(--chip-top);
+  color: var(--text);
+}
+.bar-face .btn-quiet:hover {
+  background: var(--chip-hover);
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), inset 0 1px 0 var(--chip-top);
+  color: var(--text);
+}
+.bar-face .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  color: #0a0a0a;
+}
+.bar-face .btn-primary:hover { background: #fff; color: #0a0a0a; }
+/* the landing CTA's trailing arrow (site/styles.css .btn .arrow), nudging
+   right on hover */
+.bar-face .btn-primary::after {
+  content: "";
+  width: 13px;
+  height: 13px;
+  margin-top: -2px;          /* the button's 2px top padding centres the DIN caps, not this */
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-face .btn-primary:hover::after { transform: translateX(3px); }
+
+/* ---- recording face ---- */
+.bar-stop {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0a0a;
+  background: var(--rec);
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* concentric with the capsule's left cap, like the idle close button:
+     the pill's 1px border + 20px padding put it 21pt in, but a 44px disc in
+     a 76px pill sits 16pt from top and bottom */
+  margin-left: -5px;
+  transition: background-color 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-stop:hover { background: var(--rec-hover); border-color: transparent; }
+.bar-stop svg { width: 16px; height: 16px; }
+/* pause/resume (+ scene re-pick) share the round glass button above: white
+   glyphs, since a red glyph on the glass pill drops to ~1.4:1 over white */
+
+/* Seamless window-JOIN chips: one "+ App" per window opened since the take
+   started. App-name-only, capped at 2 (server-side). A small glass chip with
+   the value face -- they are app names, not captions. */
+.bar-grow-chips { display: flex; align-items: center; gap: 6px; }
+.bar-grow-chips[hidden] { display: none; }
+.bar-grow-chip {
+  height: 30px;
+  max-width: 124px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--chip-rim), inset 0 1px 0 var(--chip-top);
+  cursor: pointer;
+}
+.bar-grow-chip:hover {
+  color: var(--text);
+  background: var(--chip-hover);
+  box-shadow: inset 0 0 0 1px var(--chip-rim-hover), inset 0 1px 0 var(--chip-top);
+}
+.bar-grow-chip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* elapsed: the value face, tabular so it never jitters (bar.html's .t-mono
+   class is outranked here on purpose -- sans, not mono) */
+.bar-timer {
+  font-family: var(--font);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  /* no min-width: tabular digits already hold the width within a digit
+     count (fmtTime is M:SS, so the pill re-fits once at 10:00); a 52px box left
+     ~15pt of slack, floating the live dot 25pt off a face spaced at 10 */
+}
+.bar-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rec);
+  animation: pulse 1.4s ease-in-out infinite;
+  flex: none;
+}
+/* while paused the live dot stops pulsing and dims */
+.bar-live-dot.paused {
+  animation: none;
+  background: var(--text-3);
+}
+
+/* ---- hint strip: a small glass capsule under the pill ---- */
+.bar-hint {
+  --text-2: rgba(234, 234, 234, 0.8);
+  margin: 0;
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: -0.003em;
+  color: var(--text-2);
+  text-align: center;
+  max-width: 660px;
+  background: #0e0e0e;
+  border: 1px solid rgba(234, 234, 234, 0.14);
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow: inset 0 1px 0 rgba(234, 234, 234, 0.07);
+}
+.bar-hint a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+/* an error: a red dot leads it (the text alone stays legible on any pill) */
+.bar-hint.err { color: #ffb8ae; }
+.bar-hint.err::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 7px 1px 0;
+  border-radius: 50%;
+  background: var(--rec);
+  vertical-align: middle;
+}
+html.native.glass .bar-hint {
+  /* the token, not `color`: a color here would outrank .bar-hint.err */
+  --text-2: rgba(255, 255, 255, 0.97);
+  background: rgba(18, 18, 20, 0.5);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 4px 12px rgba(0, 0, 0, 0.3);            /* 8px up = the row gap */
+}
+/* pink error text can't hold 4.5:1 on the light glass: white, and the red
+   dot carries the "error" */
+html.native.glass .bar-hint.err { color: #fff; }

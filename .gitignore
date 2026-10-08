@@ -1,0 +1,51 @@
+# Recordings and rendered output (screen captures — keep out of version control)
+recordings/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+/.venv/
+/venv/
+/.pytest_cache/
+/.coverage
+/htmlcov/
+/.ruff_cache/
+
+# Local environment and signing material
+/.env
+/.env.*
+!/.env.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# macOS
+.DS_Store
+
+# Per-machine runtime state the app writes beside itself. These are ANCHORED
+# with a leading slash: an unanchored `settings.json` matches at every
+# directory level, which would silently hide `.claude/settings.json` (Claude
+# Code project settings, conventionally committed) alongside the repo-root
+# file these rules are actually for.
+#
+# Floating recording bar's saved window position
+/bar-pos.json
+
+# App preferences (same rules as bar-pos.json; written by autocine/settings.py)
+/settings.json
+
+# Notes overlay's saved text — user content (bar_native.save_notepad_text)
+/notepad.txt
+
+# MCP server config — its args carry this machine's absolute path to studio.py,
+# so it is per-machine and not committed (working copy stays; regenerate on a
+# fresh checkout).
+/.mcp.json
+
+# Packaging output (packaging/build_app.py)
+/dist/
+
+# Per-machine Cloudflare Pages account/project cache (Wrangler)
+/.wrangler/

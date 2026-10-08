@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notes — AutoCine</title>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/notepad.css" />
+</head>
+<body class="notes-body">
+  <!-- A frameless always-on-top card popped out of the recording bar. It sits
+       over the display being captured, so it rides the SAME capture exclusion
+       as the pill and the facecam bubble: created by the bar process, it lands
+       in that process's pid sweep and is dropped from the ScreenCaptureKit
+       take while staying on the user's own screen. See notepad.js. -->
+  <div class="notes-card" id="notes-card">
+    <!-- The header is the ONLY drag region. The textarea, the tools and the
+         resize grip opt out via the capture-phase guard in notepad.js, so a
+         drag can never start on them (which would make text unselectable). -->
+    <header class="notes-head pywebview-drag-region" id="notes-head">
+      <span class="notes-title">
+        <span class="notes-ghost" id="notes-ghost"
+              title="Hidden from the screen recording. Visible only to you, like the recording bar. (Requires Hide bar capture.)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 2l12 12"/>
+            <path d="M6.4 3.3A6.9 6.9 0 018 3.2c3.3 0 5.6 2.4 6.4 4.8a9.6 9.6 0 01-1.5 2.5"/>
+            <path d="M11.1 11.1A6.8 6.8 0 018 11.8C4.7 11.8 2.4 9.4 1.6 8a9.7 9.7 0 012.6-3.3"/>
+            <path d="M6.6 6.6a2 2 0 002.8 2.8"/>
+          </svg>
+        </span>
+        <span class="notes-label">Notes</span>
+      </span>
+      <span class="notes-tools">
+        <button type="button" class="notes-btn notes-step" id="notes-smaller"
+                title="Smaller text" aria-label="Smaller text">A</button>
+        <button type="button" class="notes-btn notes-step notes-step-lg" id="notes-bigger"
+                title="Bigger text" aria-label="Bigger text">A</button>
+        <button type="button" class="notes-btn notes-close" id="notes-close"
+                title="Close notes" aria-label="Close notes">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
+      </span>
+    </header>
+
+    <textarea class="notes-text" id="notes-text" spellcheck="false"
+              placeholder="Paste your script or talking points...&#10;&#10;This panel stays out of the recording. Read from it while you demo."></textarea>
+
+    <footer class="notes-foot">
+      <span class="notes-hidden-note">
+        <span class="notes-hidden-dot"></span>Hidden from the recording
+      </span>
+      <span class="notes-saved" id="notes-saved" aria-live="polite"></span>
+    </footer>
+
+    <!-- guaranteed resize path (native frameless edge-resize is unreliable in
+         WKWebView); drags the bottom-right corner via the bridge. -->
+    <span class="notes-grip" id="notes-grip" title="Resize" aria-hidden="true">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M11 5L5 11M11 9L9 11"/></svg>
+    </span>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/notepad.js"></script>
+  <script src="/live-reload.js"></script>
+</body>
+</html>

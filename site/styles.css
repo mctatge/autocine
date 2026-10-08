@@ -1,0 +1,1355 @@
+/* AutoCine landing hero.
+   Tokens mirror studio_web/ui.css (the app). Hues are semantic and appear
+   nowhere else:
+     teal   --cam   the camera (zoom reticle, zoom readout, zoom ranges)
+     orange --clip  the footage (timecodes, the footage lane)
+     red    --rec   the recording signal (the logo's dot, nothing else)
+   The page is dark; there is no light theme on purpose. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0a0a0a;
+  --surface-1: #101010;
+  --surface-2: #171717;
+  --surface-3: #202020;
+
+  --line: rgba(234, 234, 234, 0.12);
+  --line-strong: rgba(234, 234, 234, 0.28);
+
+  --text: #eaeaea;
+  --text-2: rgba(234, 234, 234, 0.68);
+  --text-3: rgba(234, 234, 234, 0.46);
+  --text-small: rgba(234, 234, 234, 0.62); /* smallest text on #0a0a0a-#101010: >= 4.5:1 */
+
+  --cam: #59c7bd;
+  --cam-bright: #85eee5;
+  --clip: #d99b4a;
+  --rec: #ff2a2a;
+
+  --paper: #f2f2f0; /* the white CTA */
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --display: "DIN Alternate", "DIN Next", Bahnschrift, "Roboto Condensed", "Arial Narrow", sans-serif;
+  --serif: "Bodoni 72", Didot, "Bodoni MT", "Times New Roman", serif;
+
+  --inset: 16px;       /* page margin around the hero card */
+  --r-hero: 28px;
+  --slate-h: 52px;     /* the take slate pinned to the card's bottom */
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --dof: 1.15px;       /* the footage's depth of field at rest (rack focus on a pick) */
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  overflow-x: hidden;
+  background-color: var(--bg);
+  /* the app's telemetry grid, only visible in the page margin + footer */
+  background-image:
+    linear-gradient(rgba(234, 234, 234, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234, 234, 234, 0.022) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, p, ul { margin: 0; }
+a { color: inherit; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 24px; top: -60px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--paper);
+  color: #0a0a0a;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus { top: 24px; }
+
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* =================================================================
+   the hero card
+   ================================================================= */
+.frame {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  margin: var(--inset);
+  min-height: calc(100vh - 2 * var(--inset));
+  min-height: calc(100svh - 2 * var(--inset));
+  border-radius: var(--r-hero);
+  background: #121110;
+  box-shadow: 0 0 0 1px rgba(234, 234, 234, 0.08);
+}
+
+/* ---- background stage (the ONLY clipped layer: the results panel must
+        never be clipped by the card) ---- */
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #161513;
+  pointer-events: none;
+}
+
+.camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.placeholder,
+.stage-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* The footage sits a touch soft (depth of field) so it reads as footage
+   and stays calm behind the copy; a pick racks focus sharp. The cursor
+   layer above it is always sharp. Filter changes run on the compositor. */
+#placeholder {
+  filter: blur(var(--dof)) brightness(0.9);
+  transition: filter 0.7s ease;
+  will-change: filter; /* its own layer: the blur is cached, the cursor layer moves over it */
+}
+.frame.is-focus #placeholder {
+  filter: blur(0) brightness(0.94);
+  transition-duration: 0.45s;
+}
+
+.stage-video {
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.frame.has-video .stage-video { opacity: 1; }
+.frame.has-video .placeholder {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+}
+
+/* a dip through black: the take's loop point, and a cut to another part
+   of the desktop (main.js drives its opacity) */
+.stage-cut {
+  position: absolute;
+  inset: 0;
+  background: #0d0c0b;
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* dim + scrims: identical for the placeholder and the real video, so the
+   copy keeps AA contrast whatever footage lands behind it */
+.stage-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.5);
+  transition: opacity 0.7s ease;
+}
+/* the pool of shade behind the copy; it lifts while a pick has the stage */
+.stage-hush {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(var(--scrim-w, 56%) var(--scrim-h, 50%) at 50% 50%, rgba(10, 10, 10, var(--scrim-a, 0.66)), rgba(10, 10, 10, 0.22) 70%, rgba(10, 10, 10, 0) 100%);
+  transition: opacity 0.7s ease;
+}
+.stage-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(130% 100% at 50% 40%, rgba(10, 10, 10, 0) 55%, rgba(10, 10, 10, 0.5) 100%),
+    linear-gradient(180deg,
+      rgba(10, 10, 10, 0.42) 0%,
+      rgba(10, 10, 10, 0) 16%,
+      rgba(10, 10, 10, 0) 48%,
+      rgba(10, 10, 10, 0.7) 80%,
+      rgba(11, 11, 11, 0.97) 100%);
+}
+.frame.is-picking .stage-dim { opacity: 0.55; transition-duration: 0.4s; }
+.frame.is-picking .stage-hush { opacity: 0.25; transition-duration: 0.4s; }
+
+/* the camera's framing reticle (teal = camera). main.js positions the four
+   corners with transforms in screen space, so the strokes stay crisp while
+   the footage scales. */
+.reticle {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.reticle i {
+  position: absolute;
+  left: 0; top: 0;
+  width: 18px; height: 18px;
+  border: 0 solid var(--cam);
+  will-change: transform;
+}
+.reticle .c1 { border-left-width: 2px; border-top-width: 2px; border-top-left-radius: 5px; }
+.reticle .c2 { border-right-width: 2px; border-top-width: 2px; border-top-right-radius: 5px; }
+.reticle .c3 { border-right-width: 2px; border-bottom-width: 2px; border-bottom-right-radius: 5px; }
+.reticle .c4 { border-left-width: 2px; border-bottom-width: 2px; border-bottom-left-radius: 5px; }
+/* the zoom readout: a dark chip, so it never overprints the footage */
+.reticle-z {
+  position: absolute;
+  left: 0; top: 0;
+  padding: 4px 7px 3px;
+  border-radius: 6px;
+  background: rgba(10, 10, 10, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(89, 199, 189, 0.4);
+  color: var(--cam-bright);
+  font: 500 12px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* =================================================================
+   nav (frosted glass, like the reference)
+   ================================================================= */
+.site-header {
+  position: relative;
+  z-index: 5;
+  padding: 14px 14px 0;
+}
+
+.nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 68px;
+  padding: 10px 12px 10px 22px;
+  border-radius: 18px;
+  background: rgba(24, 23, 22, 0.46);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(234, 234, 234, 0.09),
+    inset 0 1px 0 rgba(234, 234, 234, 0.07);
+  transition: background-color 0.4s ease;
+}
+/* a pick lifts the dim off the footage; the glass darkens to keep the nav AA */
+.frame.is-picking .nav { background: rgba(20, 19, 18, 0.64); }
+
+.brand {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+}
+.brand-mark { width: 26px; height: 26px; flex: none; }
+.wordmark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  padding-top: 2px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.nav-links a,
+.nav-text {
+  display: block;
+  padding: 11px 15px 9px;
+  border-radius: 9px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(234, 234, 234, 0.88);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.nav-links a { background: rgba(234, 234, 234, 0.055); }
+.nav-links a:hover,
+.nav-text:hover { background: rgba(234, 234, 234, 0.11); color: #fff; }
+
+.nav-end {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =================================================================
+   buttons
+   ================================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, transform 0.2s var(--spring);
+}
+.btn .arrow {
+  width: 15px; height: 15px;
+  margin-top: -2px;
+  transition: transform 0.25s var(--spring);
+}
+.btn:hover .arrow { transform: translateX(3px); }
+.btn:active { transform: translateY(1px); }
+
+.btn-light { background: var(--paper); color: #0a0a0a; }
+.btn-light:hover { background: #fff; }
+.btn-sm { height: 46px; padding: 2px 18px 0; font-size: 15px; }
+.btn-lg { height: 54px; padding: 2px 24px 0; font-size: 16px; }
+
+/* =================================================================
+   hero copy
+   ================================================================= */
+.hero {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(40px, 6vh, 72px) 24px calc(var(--slate-h) + clamp(24px, 4vh, 48px));
+  text-align: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 7px 12px 5px;
+  border-radius: 7px;
+  /* neutral: a version tag, not a live/recording signal */
+  background: rgba(20, 19, 18, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.2);
+  color: rgba(244, 243, 241, 0.92);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(13px, 0.9vw, 16px);
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.badge-v {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.9em;
+  letter-spacing: 0;
+}
+
+.headline {
+  margin-top: 26px;
+  max-width: 100%;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(44px, 6.5vw, 116px);
+  line-height: 0.94;
+  letter-spacing: -0.012em;
+  text-transform: uppercase;
+  color: #f4f3f1;
+  text-wrap: balance;
+}
+.headline em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.14em;
+  line-height: 0;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  padding-right: 0.02em;
+}
+
+.lede {
+  max-width: 35em;
+  margin-top: 26px;
+  font-size: clamp(16px, 1.3vw, 19px);
+  line-height: 1.5;
+  color: rgba(234, 234, 234, 0.76);
+  text-wrap: pretty;
+}
+.lede strong {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.hero > .btn-lg { margin-top: 32px; }
+
+/* A pick takes the stage: the title steps back (everything but the search
+   bar and its caption), the footage racks into focus, then it all returns.
+   Opacity is in every transition list here, including the CTA's. */
+.step-back {
+  transition: opacity 0.6s ease 0.15s, visibility 0s linear 0s;
+}
+.btn.step-back {
+  transition: background-color 0.2s ease, transform 0.2s var(--spring), opacity 0.6s ease 0.15s, visibility 0s linear 0s;
+}
+.frame.is-picking .step-back,
+.frame.is-searching-up .step-back {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+/* results opened above the bar: they take the title's place, and the
+   still frame's reticle (which sits beside the title) steps back with it */
+.frame.is-searching-up .reticle { visibility: hidden; }
+
+/* =================================================================
+   the prompt bar (frosted glass) + results
+   ================================================================= */
+.search {
+  position: relative;
+  z-index: 10;
+  width: min(760px, 100%);
+  margin-top: 44px;
+  text-align: left;
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 74px;
+  padding: 0 11px 0 30px;
+  border-radius: 999px;
+  background: rgba(140, 136, 130, 0.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  backdrop-filter: blur(24px) saturate(1.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(234, 234, 234, 0.14),
+    inset 0 1px 0 rgba(234, 234, 234, 0.08),
+    0 20px 50px rgba(0, 0, 0, 0.32);
+  transition: box-shadow 0.2s ease, background-color 0.3s ease;
+}
+.bar:focus-within,
+.frame.is-picking .bar {
+  background: rgba(40, 39, 37, 0.66);
+  box-shadow:
+    inset 0 0 0 1px rgba(234, 234, 234, 0.3),
+    inset 0 1px 0 rgba(234, 234, 234, 0.08),
+    0 20px 50px rgba(0, 0, 0, 0.32);
+}
+/* keyboard focus ring on the whole pill (the input itself draws none) */
+.bar:has(input:focus-visible) {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.bar input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: 400 19px/1.2 var(--font);
+  letter-spacing: -0.005em;
+  caret-color: var(--text);
+  text-overflow: ellipsis; /* a long placeholder on a narrow bar */
+}
+.bar input::placeholder { color: rgba(234, 234, 234, 0.64); opacity: 1; }
+.bar input::-webkit-search-cancel-button { display: none; }
+
+/* typewriter ghost: sits over the empty, unfocused input */
+.ghost {
+  position: absolute;
+  left: 30px;
+  right: 124px;
+  top: 50%;
+  transform: translateY(-50%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(234, 234, 234, 0.86);
+  font: 400 19px/1.2 var(--font);
+  letter-spacing: -0.005em;
+  pointer-events: none;
+  opacity: 0;
+}
+.bar.ghosting:not(.has-value):not(:focus-within) .ghost { opacity: 1; }
+.bar.ghosting:not(.has-value):not(:focus-within) input::placeholder { color: transparent; }
+.caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.08em;
+  margin-left: 1px;
+  vertical-align: -0.17em;
+  background: currentColor;
+  animation: caret 1.05s steps(1, end) infinite;
+}
+.bar.typing .caret,
+html.is-paused .caret { animation: none; }
+@keyframes caret { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+.slash-hint {
+  flex: none;
+  margin-right: 14px;
+  padding: 3px 8px 2px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.2);
+  color: rgba(234, 234, 234, 0.62);
+  font: 500 12px/1.2 var(--mono);
+  transition: opacity 0.2s ease;
+}
+.bar:focus-within .slash-hint,
+.bar.has-value .slash-hint { opacity: 0; }
+
+.submit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 54px; height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(234, 234, 234, 0.16);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.25s var(--spring);
+}
+.submit svg { width: 20px; height: 20px; }
+.submit:hover { background: rgba(234, 234, 234, 0.26); }
+.submit:active { transform: scale(0.94); }
+.bar.has-value .submit { background: var(--paper); color: #0a0a0a; }
+
+.results {
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(100% + 10px);
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface-1);
+  box-shadow:
+    0 0 0 1px var(--line),
+    inset 0 1px 0 rgba(234, 234, 234, 0.05),
+    0 28px 70px rgba(0, 0, 0, 0.55);
+}
+/* desktop windows without room below the bar: the panel opens above it
+   (main.js placePanel also sizes the list to the room it gets) */
+.results.is-up {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+.results-list {
+  position: relative; /* the options' offsetParent: main.js scrolls the list, not the page */
+  max-height: min(420px, 52vh);
+  overflow-y: auto;
+  padding: 6px;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+.results-list:empty { padding: 0; }
+.opt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 14px;
+  padding: 12px 14px 13px;
+  border-radius: 14px;
+  cursor: pointer;
+  scroll-margin: 6px;
+}
+.opt + .opt { margin-top: 2px; }
+.opt[aria-selected="true"] {
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.opt-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.opt-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.opt-feat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-small);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.opt-feat svg { width: 13px; height: 13px; flex: none; }
+.tc {
+  padding: 3px 7px 2px;
+  border-radius: 5px;
+  background: rgba(217, 155, 74, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(217, 155, 74, 0.3);
+  color: var(--clip);
+  font: 500 12px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.opt-text {
+  grid-column: 1 / -1;
+  color: rgba(234, 234, 234, 0.72);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+/* matched words: a quiet underline, not a filled chip */
+mark {
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(234, 234, 234, 0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.results-empty {
+  padding: 18px 20px 16px;
+  color: rgba(234, 234, 234, 0.74);
+  font-size: 14.5px;
+}
+.results-empty p + p { margin-top: 8px; }
+.results-empty .try {
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(234, 234, 234, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.results-empty .try:hover { background: rgba(234, 234, 234, 0.14); }
+
+.results-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px 11px;
+  border-top: 1px solid var(--line);
+  color: var(--text-small);
+  font: 400 12px/1.4 var(--font);
+}
+.results-keys { flex: none; white-space: nowrap; }
+.results-keys kbd {
+  display: inline-block;
+  min-width: 18px;
+  margin-right: 3px;
+  padding: 1px 4px 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.2);
+  font: 11px/1.4 var(--mono);
+  text-align: center;
+}
+
+/* =================================================================
+   tagline <-> caption, and the laurel-equivalent marks
+   ================================================================= */
+.tagline {
+  display: grid;
+  justify-items: center;
+  max-width: 100%;
+  margin-top: 26px;
+  color: rgba(234, 234, 234, 0.72);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.tagline > span {
+  grid-area: 1 / 1;
+  max-width: 100%;
+  transition: opacity 0.35s ease, transform 0.5s var(--spring);
+}
+.tagline-text { text-wrap: balance; }
+.tagline-cap {
+  opacity: 0;
+  transform: translateY(4px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* a subtitle chip: it sits over the zoomed footage during a pick */
+  padding: 4px 12px;
+  margin-top: -4px;
+  border-radius: 8px;
+  background: rgba(10, 10, 10, 0.7);
+  color: rgba(234, 234, 234, 0.84);
+}
+.tagline.is-caption .tagline-text { opacity: 0; }
+.tagline.is-caption .tagline-cap { opacity: 1; transform: none; }
+.tagline-cap b { color: var(--text); font-weight: 600; }
+.tagline-cap .tc-inline {
+  color: var(--clip);
+  font: 500 0.9em/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px 40px;
+  margin-top: 30px;
+  padding: 0;
+  list-style: none;
+}
+.mark {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.brk {
+  flex: none;
+  width: 10px;
+  height: auto;
+  min-height: 44px;
+  color: rgba(234, 234, 234, 0.46);
+}
+.brk-r { transform: scaleX(-1); }
+.mark-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* titles in a row share one baseline, whatever their subs wrap to */
+  gap: 5px;
+  padding: 3px 0 2px;
+}
+.mark-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(244, 243, 241, 0.94);
+}
+.mark-sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(234, 234, 234, 0.7);
+}
+.mark-sub > span { display: inline-block; }
+
+/* while the results panel is open, it owns the space below the bar */
+.hero.is-searching .tagline,
+.hero.is-searching .marks {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+}
+
+/* =================================================================
+   the slate: what is playing behind the hero
+   ================================================================= */
+.slate {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: var(--slate-h);
+  padding: 0 10px 0 26px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.slate p { min-width: 0; }
+.slate-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(234, 234, 234, 0.62);
+}
+.slate-kind { color: rgba(234, 234, 234, 0.82); }
+.slate-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: rgba(234, 234, 234, 0.8);
+}
+.slate-tc {
+  justify-self: end;
+  margin-right: 50px;
+  color: var(--clip);
+  font: 500 12.5px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.slate-z {
+  display: inline-block;
+  min-width: 4.4em;
+  margin-right: 14px;
+  text-align: right;
+  color: rgba(234, 234, 234, 0.62);
+  transition: color 0.3s ease;
+}
+.slate-z.is-zoomed { color: var(--cam-bright); } /* teal = the camera, only while it is zoomed */
+.motion {
+  position: absolute;
+  right: 6px; top: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  margin-top: -22px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(234, 234, 234, 0.78);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.motion:hover { background: rgba(234, 234, 234, 0.1); color: #fff; }
+.motion svg { width: 16px; height: 16px; }
+.motion .i-play,
+.motion[aria-pressed="true"] .i-pause { display: none; }
+.motion[aria-pressed="true"] .i-play { display: block; }
+
+/* the take's timeline: footage (orange), the camera's zoom plan (teal), a
+   playhead. Hairline thin; it doubles as the slate's top edge. */
+.lane {
+  position: absolute;
+  left: 26px; right: 26px; top: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(217, 155, 74, 0.34);
+}
+.lane-zooms { position: absolute; inset: 0; transition: opacity 0.3s ease; }
+.lane-zooms.is-off { opacity: 0; } /* another take is on the slate: this plan is not its */
+.lane-zooms i {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: 1px;
+  background: var(--cam);
+  opacity: 0.8;
+}
+.frame.has-video .lane-zooms { display: none; } /* TODO(hero-video): the real take's zoom plan */
+/* the playhead moves by transform inside a clipped track, so it never
+   widens the page */
+.lane-track {
+  position: absolute;
+  left: -2px; right: -2px; top: -4px;
+  height: 10px;
+  overflow: hidden;
+}
+.lane-head {
+  position: absolute;
+  left: 2px; right: 2px; top: 0; bottom: 0;
+  will-change: transform;
+}
+.lane-head i {
+  position: absolute;
+  left: -1px; top: 0;
+  width: 2px; height: 10px;
+  border-radius: 1px;
+  background: var(--text);
+}
+
+/* =================================================================
+   MCP: the deterministic agent-editing loop
+   ================================================================= */
+.mcp-section {
+  position: relative;
+  isolation: isolate;
+  width: min(1180px, calc(100% - 2 * var(--inset)));
+  margin: clamp(72px, 9vw, 132px) auto clamp(40px, 6vw, 84px);
+  padding: clamp(30px, 5vw, 68px);
+  overflow: hidden;
+  scroll-margin-top: 24px;
+  border: 1px solid rgba(234, 234, 234, 0.1);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% -10%, rgba(118, 214, 194, 0.12), transparent 38%),
+    linear-gradient(145deg, rgba(30, 29, 27, 0.98), rgba(15, 15, 14, 0.98));
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.3);
+}
+.mcp-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.52;
+  background-image:
+    linear-gradient(rgba(234, 234, 234, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234, 234, 234, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, #000, transparent 62%);
+}
+.mcp-intro {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(24px, 5vw, 78px);
+  align-items: start;
+}
+.section-kicker {
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  color: rgba(234, 234, 234, 0.64);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.section-kicker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--camera);
+  box-shadow: 0 0 18px rgba(118, 214, 194, 0.62);
+}
+.mcp-intro h2 {
+  grid-column: 2;
+  margin: 0;
+  max-width: 790px;
+  color: #f4f3f1;
+  font-family: var(--display);
+  font-size: clamp(34px, 4.8vw, 66px);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.mcp-deck {
+  grid-column: 2;
+  max-width: 710px;
+  margin-top: 24px;
+  color: rgba(234, 234, 234, 0.7);
+  font-size: clamp(16px, 1.5vw, 19px);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.mcp-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: clamp(36px, 5vw, 64px) 0 0;
+  padding: 1px;
+  border-radius: 16px;
+  background: rgba(234, 234, 234, 0.1);
+  list-style: none;
+  overflow: hidden;
+}
+.mcp-flow li {
+  position: relative;
+  min-height: 214px;
+  padding: 24px 22px 22px;
+  background: rgba(13, 13, 12, 0.78);
+}
+.mcp-flow li::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 0;
+  height: 1px;
+  background: var(--camera);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.mcp-flow li:hover::after { opacity: 1; }
+.step-no {
+  display: block;
+  color: var(--camera);
+  font: 500 12px/1 var(--mono);
+  letter-spacing: 0.04em;
+}
+.mcp-flow strong {
+  display: block;
+  margin-top: 18px;
+  color: #f4f3f1;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.mcp-flow code {
+  display: block;
+  margin-top: 13px;
+  overflow: hidden;
+  color: rgba(118, 214, 194, 0.88);
+  font: 500 12px/1.4 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-flow p {
+  margin-top: 15px;
+  color: rgba(234, 234, 234, 0.58);
+  font-size: 13px;
+  line-height: 1.48;
+}
+.mcp-boundary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: 22px;
+  padding: 20px 22px;
+  border: 1px solid rgba(234, 234, 234, 0.09);
+  border-radius: 13px;
+  background: rgba(8, 8, 8, 0.42);
+  color: rgba(234, 234, 234, 0.62);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mcp-boundary > p:first-child { max-width: 770px; }
+.mcp-boundary strong { color: rgba(244, 243, 241, 0.94); }
+.mcp-status {
+  flex: none;
+  color: rgba(234, 234, 234, 0.46);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+/* =================================================================
+   footer
+   ================================================================= */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 10px calc(var(--inset) + 14px) 28px;
+  color: var(--text-small);
+  font-size: 13px;
+}
+.foot-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(234, 234, 234, 0.72);
+}
+.foot-brand .brand-mark { width: 18px; height: 18px; }
+.site-footer a {
+  color: rgba(234, 234, 234, 0.84);
+  text-underline-offset: 3px;
+  border-radius: 4px;
+}
+.site-footer a:hover { color: #fff; }
+
+/* =================================================================
+   touch: every target is at least 44px
+   ================================================================= */
+/* while typing on a phone, main.js lifts the bar to the top of the screen
+   so the results open above the keyboard; this is the room it needs */
+html.is-touch-typing .site-footer { padding-bottom: 80vh; }
+
+@media (pointer: coarse) {
+  .results-empty .try { min-height: 44px; padding: 8px 12px; margin: 2px 0; }
+  .site-footer a { display: inline-block; padding: 12px 6px; margin: -12px -6px; }
+}
+
+/* =================================================================
+   responsive
+   ================================================================= */
+@media (max-width: 1100px) {
+  .slate { grid-template-columns: minmax(0, 1fr) auto; }
+  .slate-sub { display: none; }
+}
+
+@media (max-width: 980px) {
+  .nav-text { display: none; }
+  .mcp-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mcp-flow li { min-height: 190px; }
+  .mcp-boundary { flex-direction: column; }
+  .mcp-status { text-align: left; }
+}
+/* big screens film the desktop larger: deepen the depth of field to match */
+@media (min-width: 1700px) {
+  :root { --dof: 1.5px; }
+}
+
+/* portrait cards (phones, tablets upright): the copy covers most of the
+   card, so the footage is dimmed harder and the shade widened */
+@media (max-aspect-ratio: 1/1) {
+  .stage-dim { background: rgba(10, 10, 10, 0.6); }
+  .stage-hush { --scrim-w: 110%; --scrim-h: 60%; --scrim-a: 0.6; }
+}
+/* portrait tablets: the headline takes two lines, like on phones */
+@media (max-aspect-ratio: 1/1) and (min-width: 761px) {
+  .headline { font-size: clamp(56px, 10.4vw, 112px); line-height: 0.95; }
+  .lede { font-size: 19px; }
+}
+
+/* short landscape windows (1280x720 laptops): keep the whole hero on screen */
+@media (min-width: 761px) and (max-height: 820px) {
+  :root { --slate-h: 46px; }
+  .site-header { padding-top: 12px; }
+  .nav { min-height: 62px; }
+  .hero { padding-top: 22px; padding-bottom: calc(var(--slate-h) + 18px); }
+  .headline { margin-top: 18px; font-size: clamp(44px, min(6.5vw, 12vh), 116px); }
+  .lede { margin-top: 16px; }
+  .hero > .btn-lg { margin-top: 22px; }
+  .search { margin-top: 26px; }
+  .bar { height: 64px; }
+  .submit { width: 48px; height: 48px; }
+  .tagline { margin-top: 16px; }
+  .marks { margin-top: 16px; }
+  .brk { min-height: 40px; }
+  .mark-sub { font-size: 12.5px; }
+}
+
+@media (max-width: 760px) {
+  :root { --inset: 10px; --r-hero: 22px; --slate-h: 48px; }
+  .site-header { padding: 10px 10px 0; }
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    min-height: 58px;
+    padding: 7px 7px 7px 16px;
+    border-radius: 15px;
+  }
+  .nav-links { display: none; }
+  .wordmark { font-size: 20px; }
+  .brand-mark { width: 24px; height: 24px; }
+  .btn-sm { height: 44px; padding: 2px 15px 0; font-size: 14px; }
+
+  .hero { padding: 28px 16px calc(var(--slate-h) + 16px); }
+  .badge { font-size: 12.5px; }
+  .headline { margin-top: 18px; font-size: clamp(40px, 12.2vw, 72px); line-height: 0.96; }
+  .lede { margin-top: 16px; font-size: 16px; }
+  .hero > .btn-lg { margin-top: 22px; }
+
+  .search { margin-top: 24px; }
+  .bar { height: 62px; padding: 0 7px 0 20px; }
+  .bar input, .ghost { font-size: 16px; }
+  .ghost { left: 20px; right: 64px; }
+  .slash-hint { display: none; }
+  .submit { width: 48px; height: 48px; }
+  .results { border-radius: 18px; }
+  .results-keys { display: none; }
+  /* the featured marker keeps its glyph; its words stay for screen readers */
+  .opt-feat-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .results-foot { padding: 10px 16px 11px; }
+
+  .tagline { margin-top: 16px; font-size: 15px; }
+  /* the caption takes two or three lines here, so it overlays the marks
+     (which step aside while it shows) instead of growing the card */
+  .tagline { position: relative; }
+  .tagline-cap {
+    position: absolute;
+    top: 0; left: 50%;
+    width: min(358px, calc(100vw - 32px));
+    max-width: none;
+    transform: translate(-50%, 4px);
+    white-space: normal;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  }
+  .tagline.is-caption .tagline-cap { transform: translate(-50%, 0); }
+  .tagline-cap .cap-dash { display: none; }
+  .tagline-cap .cap-q { display: block; }
+  .hero.has-caption .marks { opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0s linear 0.2s; }
+
+  /* two marks, then one: the captions wrap inside a narrow column */
+  .marks { gap: 12px 18px; margin-top: 18px; }
+  .mark { gap: 8px; }
+  .mark-body { max-width: 128px; }
+  .brk { min-height: 40px; width: 9px; }
+  .mark-title { font-size: 15px; }
+  .mark-sub { font-size: 12.5px; line-height: 1.3; }
+
+  .slate { padding: 0 4px 0 18px; gap: 10px; }
+  .lane { left: 18px; right: 18px; }
+  .slate-title { display: none; }
+  .slate-tc { margin-right: 48px; }
+
+  .site-footer { padding: 8px 26px 24px; }
+
+  .mcp-section {
+    width: calc(100% - 2 * var(--inset));
+    margin-top: 56px;
+    padding: 28px 18px 20px;
+    border-radius: 20px;
+  }
+  .mcp-intro { display: block; }
+  .section-kicker { padding-top: 0; }
+  .mcp-intro h2 {
+    margin-top: 24px;
+    font-size: clamp(32px, 10vw, 48px);
+  }
+  .mcp-deck { margin-top: 20px; padding-top: 0; }
+  .mcp-flow { grid-template-columns: 1fr; margin-top: 30px; }
+  .mcp-flow li { min-height: 0; padding: 22px 20px 24px; }
+  .mcp-boundary { margin-top: 16px; padding: 18px; }
+}
+
+@media (max-width: 400px) {
+  .marks { gap: 10px 10px; }
+  .mark { gap: 6px; }
+  .mark-body { max-width: 116px; }
+}
+/* the narrowest phones: the slate keeps its clock, not a truncated name */
+@media (max-width: 350px) {
+  .slate-name { display: none; }
+  .slate { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Large displays (27-inch / 5K at 2560x1440, and up): the 1920x1080
+   layout, scaled as a whole. --u is one "1920 pixel" (1px at 1920x1080,
+   1.33px at 2560x1440, at most 1.45px), so the headline, the bar and the
+   chrome keep their proportions instead of stopping at their caps while
+   the card keeps growing. The footage is filmed bigger too, so its depth
+   of field deepens with it. */
+@media (min-width: 2000px) and (min-height: 1100px) and (min-aspect-ratio: 1/1) {
+  :root {
+    --u: clamp(1px, min(100vw / 1920, 100vh / 1080), 1.45px);
+    --inset: calc(16 * var(--u));
+    --r-hero: calc(28 * var(--u));
+    --slate-h: calc(52 * var(--u));
+    --dof: calc(2 * var(--u));
+  }
+  .site-header { padding: calc(14 * var(--u)) calc(14 * var(--u)) 0; }
+  .nav {
+    min-height: calc(68 * var(--u));
+    padding: calc(10 * var(--u)) calc(12 * var(--u)) calc(10 * var(--u)) calc(22 * var(--u));
+    border-radius: calc(18 * var(--u));
+  }
+  .brand { gap: calc(10 * var(--u)); }
+  .brand-mark { width: calc(26 * var(--u)); height: calc(26 * var(--u)); }
+  .wordmark { font-size: calc(22 * var(--u)); }
+  .nav-links { gap: calc(6 * var(--u)); }
+  .nav-links a,
+  .nav-text {
+    padding: calc(11 * var(--u)) calc(15 * var(--u)) calc(9 * var(--u));
+    border-radius: calc(9 * var(--u));
+    font-size: calc(14 * var(--u));
+  }
+  .nav-end { gap: calc(12 * var(--u)); }
+
+  .btn { gap: calc(10 * var(--u)); border-radius: calc(8 * var(--u)); }
+  .btn .arrow { width: calc(15 * var(--u)); height: calc(15 * var(--u)); }
+  .btn-sm { height: calc(46 * var(--u)); padding: calc(2 * var(--u)) calc(18 * var(--u)) 0; font-size: calc(15 * var(--u)); }
+  .btn-lg { height: calc(54 * var(--u)); padding: calc(2 * var(--u)) calc(24 * var(--u)) 0; font-size: calc(16 * var(--u)); }
+
+  .hero { padding: calc(72 * var(--u)) calc(24 * var(--u)) calc(var(--slate-h) + 48 * var(--u)); }
+  .badge { padding: calc(7 * var(--u)) calc(12 * var(--u)) calc(5 * var(--u)); border-radius: calc(7 * var(--u)); font-size: calc(16 * var(--u)); }
+  .headline { margin-top: calc(26 * var(--u)); font-size: calc(116 * var(--u)); }
+  .lede { margin-top: calc(26 * var(--u)); font-size: calc(19 * var(--u)); }
+  .hero > .btn-lg { margin-top: calc(32 * var(--u)); }
+
+  .search { width: min(calc(760 * var(--u)), 100%); margin-top: calc(44 * var(--u)); }
+  .bar { height: calc(74 * var(--u)); padding: 0 calc(11 * var(--u)) 0 calc(30 * var(--u)); }
+  .bar input,
+  .ghost { font-size: calc(19 * var(--u)); }
+  .ghost { left: calc(30 * var(--u)); right: calc(124 * var(--u)); }
+  .slash-hint { margin-right: calc(14 * var(--u)); padding: calc(3 * var(--u)) calc(8 * var(--u)) calc(2 * var(--u)); border-radius: calc(6 * var(--u)); font-size: calc(12 * var(--u)); }
+  .submit { width: calc(54 * var(--u)); height: calc(54 * var(--u)); }
+  .submit svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
+
+  .results { border-radius: calc(20 * var(--u)); }
+  .opt { gap: calc(5 * var(--u)) calc(14 * var(--u)); padding: calc(12 * var(--u)) calc(14 * var(--u)) calc(13 * var(--u)); border-radius: calc(14 * var(--u)); }
+  .opt-name,
+  .opt-text,
+  .results-empty { font-size: calc(14.5 * var(--u)); }
+  .opt-feat { font-size: calc(12.5 * var(--u)); }
+  .opt-feat svg { width: calc(13 * var(--u)); height: calc(13 * var(--u)); }
+  .tc { font-size: calc(12 * var(--u)); }
+  .results-foot { padding: calc(10 * var(--u)) calc(20 * var(--u)) calc(11 * var(--u)); font-size: calc(12 * var(--u)); }
+  .results-keys kbd { font-size: calc(11 * var(--u)); min-width: calc(18 * var(--u)); }
+
+  .tagline { margin-top: calc(26 * var(--u)); font-size: calc(16 * var(--u)); }
+  .marks { gap: calc(16 * var(--u)) calc(40 * var(--u)); margin-top: calc(30 * var(--u)); }
+  .mark { gap: calc(12 * var(--u)); }
+  .brk { width: calc(10 * var(--u)); min-height: calc(44 * var(--u)); }
+  .mark-body { gap: calc(5 * var(--u)); }
+  .mark-title { font-size: calc(18 * var(--u)); }
+  .mark-sub { font-size: calc(13 * var(--u)); }
+
+  .slate { gap: calc(16 * var(--u)); padding: 0 calc(10 * var(--u)) 0 calc(26 * var(--u)); font-size: calc(13 * var(--u)); }
+  .lane { left: calc(26 * var(--u)); right: calc(26 * var(--u)); }
+  .slate-tc { margin-right: calc(50 * var(--u)); font-size: calc(12.5 * var(--u)); }
+  .motion { width: calc(44 * var(--u)); height: calc(44 * var(--u)); margin-top: calc(-22 * var(--u)); }
+  .motion svg { width: calc(16 * var(--u)); height: calc(16 * var(--u)); }
+  .reticle-z { font-size: calc(12 * var(--u)); }
+
+  .site-footer { padding: calc(10 * var(--u)) calc(30 * var(--u)) calc(28 * var(--u)); font-size: calc(13 * var(--u)); }
+}
+
+/* =================================================================
+   motion preferences + deterministic screenshots
+   ================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  .motion { display: none; } /* nothing moves on its own, so nothing to pause */
+}
+html.is-shot *,
+html.is-shot *::before,
+html.is-shot *::after {
+  animation: none !important;
+  transition: none !important;
+}

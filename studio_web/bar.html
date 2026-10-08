@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>New Recording — AutoCine</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg fill='none' stroke='%23eaeaea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 11V8.5A2.5 2.5 0 018.5 6H11'/%3E%3Cpath d='M21 6h2.5A2.5 2.5 0 0126 8.5V11'/%3E%3Cpath d='M26 21v2.5a2.5 2.5 0 01-2.5 2.5H21'/%3E%3Cpath d='M11 26H8.5A2.5 2.5 0 016 23.5V21'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff2a2a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/bar.css" />
+</head>
+<body class="bar-body">
+  <!-- pywebview-drag-region: the whole pill moves the frameless window. Clicks
+       on real controls are kept out of it by the capture-phase guard in bar.js. -->
+  <div class="bar-pill pywebview-drag-region" id="bar">
+
+    <!-- idle: pickers + record -->
+    <div class="bar-face" id="face-idle">
+      <button class="btn-icon bar-close" id="bar-close" title="Close">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+      <div class="bar-sep"></div>
+
+      <!-- plain divs, not <label>s: a label forwards clicks into its control,
+           which would fight the drag surface. The selects carry their own
+           aria-label instead. -->
+      <div class="bar-picker" title="Display to capture">
+        <span class="bar-picker-icon" data-icon="display"></span>
+        <select id="bar-display" aria-label="Display to capture"><option value="">Auto</option></select>
+        <span class="bar-picker-label">Display</span>
+      </div>
+
+      <!-- Window capture. Deliberately NOT extra entries in the Display picker:
+           avfoundation can't target a window, so we always capture a whole
+           display and crop to the window's rect at render time (following it
+           if it moves — see the geometry track). Keeping the two controls
+           separate is what makes that model — and the occlusion caveat bar.js
+           prints when a window is picked — legible.
+           Starts hidden and stays hidden unless /api/windows has something to
+           offer (see loadWindows): the idle pill is content-sized, so an extra
+           picker costs real width. The inline display is load-bearing —
+           bar.css's `.bar-picker { display: flex }` is an author rule and beats
+           the UA `[hidden]` rule, so the attribute alone would not hide this.
+           showWindowPicker() owns both. -->
+      <div class="bar-picker" id="bar-window-wrap" hidden style="display: none"
+           title="Record one window, or up to four together. The full display is still what gets captured.">
+        <span class="bar-picker-icon" data-icon="windows"></span>
+        <!-- Two ways in, and only ever one visible. The BUTTON opens the
+             full-screen hover picker (pick_windows on the native bridge),
+             which is the real UI: hover a window, it lights up, click to
+             toggle, up to four. The SELECT is the fallback for every context
+             where that overlay can't exist — the Chrome app-mode bar, a
+             pywebview that won't open a second window — and is the reason a
+             broken overlay can never cost you the ability to record a
+             window. bar.js picks between them once, at boot. -->
+        <button type="button" id="bar-window-btn" class="bar-window-btn" hidden
+                aria-label="Pick windows to record">Full screen</button>
+        <select id="bar-window" aria-label="Window to capture">
+          <option value="">Full screen</option>
+        </select>
+        <span class="bar-picker-label">Window</span>
+      </div>
+
+      <!-- Occlusion-free capture. Records the ONE picked window's own buffer via
+           ScreenCaptureKit (initWithDesktopIndependentWindow_), so anything in
+           front of it never appears in the video -- unlike the default window
+           pick above, which crops the display and so shows whatever is on top.
+           It needs exactly one window and the Hide-bar (SCK) engine, so bar.js
+           shows this only while a single window is picked (syncOcclusionToggle)
+           and forces Capture -> Hide bar when it is on. Starts hidden; the
+           inline display:none is load-bearing for the same reason as the window
+           wrapper above. -->
+      <div class="bar-picker bar-toggle" id="bar-occlusion-wrap" hidden style="display: none"
+           title="Record only this window's own pixels, so windows in front of it never appear in the recording. Uses the Hide-bar (ScreenCaptureKit) engine.">
+        <input type="checkbox" id="bar-occlusion" class="bar-toggle-input"
+               aria-label="Occlusion-free: record only this window's own pixels" />
+        <span class="bar-picker-label" id="bar-occlusion-label">Only this window</span>
+      </div>
+
+      <!-- Auto-add windows: a sub-option of occlusion-free. While it's on,
+           every window you BRING TO THE FRONT during the take is joined
+           automatically (bar.js drives the same /api/record/grow the "+ App"
+           chips do, one at a time), up to the 4-window cap -- so you never have
+           to click each chip. "Bring to the front", not "open": on macOS,
+           clicking Finder in the Dock or opening a document usually raises a
+           window that was already there (docs/architecture.md M2.4c). bar.js shows
+           this only while occlusion-free is on (grow is a fleet-only
+           capability); starts hidden, inline display:none load-bearing like the
+           wrappers above. -->
+      <div class="bar-picker bar-toggle" id="bar-autoadd-wrap" hidden style="display: none"
+           title="Automatically record every window you bring to the front during the take. Newly opened, or already open behind the others (up to the 4-window maximum).">
+        <input type="checkbox" id="bar-autoadd" class="bar-toggle-input"
+               aria-label="Auto-add windows brought to the front during the recording" />
+        <span class="bar-picker-label" id="bar-autoadd-label">Auto-add windows</span>
+      </div>
+
+      <div class="bar-picker" title="Microphone">
+        <span class="bar-picker-icon" data-icon="mic"></span>
+        <select id="bar-mic" aria-label="Microphone"><option value="none">No mic</option></select>
+        <span class="bar-picker-label">Microphone</span>
+      </div>
+
+      <div class="bar-picker" title="Cursor capture mode. Synthetic hides the real cursor and draws a smooth one at render time.">
+        <span class="bar-picker-icon" data-icon="cursor"></span>
+        <select id="bar-cursor" aria-label="Cursor capture mode">
+          <option value="system">System</option>
+          <option value="synthetic">Synthetic</option>
+        </select>
+        <span class="bar-picker-label">Cursor</span>
+      </div>
+
+      <div class="bar-picker" title="Facecam. Webcam preview shown while recording.">
+        <span class="bar-picker-icon" data-icon="camera"></span>
+        <select id="bar-camera" aria-label="Camera"><option value="none">No camera</option></select>
+        <span class="bar-picker-label">Camera</span>
+      </div>
+
+      <!-- Which engine captures the screen. Named for what it DOES rather
+           than for the framework: the only difference a user can see in the
+           finished video is whether this bar is burned into it. avfoundation
+           cannot hide it — no flag exists — so "Hide bar" selects SCK. -->
+      <div class="bar-picker" title="Standard: ffmpeg/avfoundation, the proven path. This bar appears in the video. Hide bar: ScreenCaptureKit keeps the bar out while it stays visible on your screen.">
+        <span class="bar-picker-icon" data-icon="frame"></span>
+        <select id="bar-backend" aria-label="Screen capture engine">
+          <option value="avfoundation">Standard</option>
+          <option value="sck">Hide bar</option>
+        </select>
+        <span class="bar-picker-label">Capture</span>
+      </div>
+
+      <div class="bar-picker bar-picker-narrow" title="Countdown before recording starts">
+        <select id="bar-countdown" aria-label="Countdown before recording starts">
+          <option value="0">0s</option>
+          <option value="3" selected>3s</option>
+          <option value="5">5s</option>
+          <option value="10">10s</option>
+        </select>
+        <span class="bar-picker-label">Countdown</span>
+      </div>
+
+      <div class="bar-sep"></div>
+      <!-- Notes: a floating scratchpad you paste your demo script into. It
+           stays on your screen but out of the recording (SCK "Hide bar"
+           capture), riding the same exclusion as this pill and the facecam.
+           Toggles the overlay window (bar.js toggleNotes / studio_app
+           notepad_open). -->
+      <button class="btn-icon bar-notes" id="bar-notes" aria-pressed="false"
+              title="Notes. A scratchpad for your demo script that stays out of the recording.">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2.5h5.6L12.5 5.4V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3.5a1 1 0 011-1z"/>
+          <path d="M9.4 2.6V5a.9.9 0 00.9.9h2.3"/>
+          <path d="M5.4 8.4h5M5.4 10.6h3.2"/>
+        </svg>
+      </button>
+      <!-- facecam preview. Click to pop it out into its own floating window
+           and click again to dock it back in the pill. -->
+      <button class="bar-cam-slot" id="bar-cam-slot"
+              title="Facecam preview. Click to pop it out of the bar." hidden>
+        <span class="bar-cam-preview" id="bar-cam-preview">
+          <video id="bar-cam-video" autoplay playsinline muted></video>
+          <!-- MJPEG from Python, used when the runtime has no mediaDevices
+               (WKWebView) — see loadCameras/startCam in bar.js -->
+          <img id="bar-cam-img" alt="" hidden>
+        </span>
+        <span class="bar-cam-detached" id="bar-cam-detached" hidden>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.8" y="4.2" width="8.4" height="7.6" rx="1.6"/><path d="M10.2 7.2l4-2.2v6l-4-2.2"/></svg>
+        </span>
+        <span class="bar-cam-badge" id="bar-cam-badge">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3H13v3.5"/><path d="M12.6 3.4L8.4 7.6"/><path d="M11 9.6V12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1h2.4"/></svg>
+        </span>
+      </button>
+      <button class="bar-record" id="bar-record" title="Start recording">
+        <span class="bar-record-dot"></span>
+      </button>
+    </div>
+
+    <!-- countdown -->
+    <div class="bar-face bar-face-center" id="face-countdown" hidden>
+      <span class="bar-count" id="bar-count">3</span>
+      <!-- names the picked window during the countdown, so a mis-pick is still
+           catchable (bar.js applyRecord) -->
+      <span class="t-label" id="bar-count-note">Recording starts...</span>
+      <button id="bar-cancel" class="btn-quiet">Cancel</button>
+    </div>
+
+    <!-- recording -->
+    <div class="bar-face bar-face-center" id="face-recording" hidden>
+      <button class="bar-stop" id="bar-stop" title="Stop recording">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
+      </button>
+      <button class="bar-pause" id="bar-pause" title="Pause recording">
+        <svg id="bar-pause-glyph" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3.5" width="3" height="9" rx="1"/><rect x="9" y="3.5" width="3" height="9" rx="1"/></svg>
+        <svg id="bar-resume-glyph" viewBox="0 0 16 16" fill="currentColor" hidden><path d="M5.5 3.8v8.4c0 .62.68 1 1.2.68l6.6-4.2a.8.8 0 0 0 0-1.36l-6.6-4.2a.8.8 0 0 0-1.2.68z"/></svg>
+      </button>
+      <!-- Scene takes: while PAUSED on an occlusion-free take, re-pick the
+           window set for the next scene (the pause is a quiescent capture
+           gap, so the fullscreen picker cannot contaminate footage). -->
+      <button class="bar-pause" id="bar-repick" title="Change windows for the next scene" hidden>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="7" height="6" rx="1"/><rect x="6.5" y="7.5" width="7" height="6" rx="1"/></svg>
+      </button>
+      <!-- Seamless window-JOIN (docs/architecture.md milestone 2): while RECORDING
+           an occlusion-free take, one chip per window opened since the take
+           started. Click adds it live — no pause. Fed by /api/state
+           new_windows; hidden on every non-fleet / non-recording state. -->
+      <div id="bar-grow-chips" class="bar-grow-chips" hidden></div>
+      <span class="bar-timer t-mono" id="bar-timer">0:00</span>
+      <span class="bar-live-dot" id="bar-live-dot"></span>
+      <span class="t-label" id="bar-rec-note">Recording</span>
+    </div>
+
+    <!-- finishing / done -->
+    <div class="bar-face bar-face-center" id="face-done" hidden>
+      <span class="t-label" id="bar-done-note">Saving...</span>
+      <button id="bar-open-editor" class="btn-primary" hidden>Open in Editor</button>
+      <button id="bar-again" class="btn-quiet" hidden>New Recording</button>
+    </div>
+
+  </div>
+  <p class="bar-hint" id="bar-hint" hidden></p>
+
+  <script src="/shared.js"></script>
+  <script src="/bar.js"></script>
+  <script src="/live-reload.js"></script>
+</body>
+</html>

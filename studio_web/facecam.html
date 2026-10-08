@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Facecam — AutoCine</title>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/facecam.css" />
+</head>
+<body class="face-body">
+  <!-- pywebview-drag-region: the whole bubble moves the frameless window;
+       the dock button opts out via the guard in facecam.js -->
+  <div class="face-bubble pywebview-drag-region" id="face-bubble">
+    <video id="face-video" autoplay playsinline muted></video>
+    <!-- MJPEG from Python, used in the native shell (see facecam.js start) -->
+    <img id="face-img" alt="" hidden>
+    <div class="face-empty" id="face-empty">Camera off</div>
+    <button class="face-dock" id="face-dock" title="Dock the facecam back in the bar">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 13H3V9.5"/><path d="M3.4 12.6l4.2-4.2"/><path d="M5 6.4V4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H9.6"/></svg>
+    </button>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/facecam.js"></script>
+  <script src="/live-reload.js"></script>
+</body>
+</html>

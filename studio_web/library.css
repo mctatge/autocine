@@ -1,0 +1,716 @@
+/* library.css - the projects home.
+   Material: the landing page's frosted glass + soft depth (tokens in ui.css,
+   "glass + depth"), inside the app's telemetry chassis. No serif, no animated
+   background, no new hues: red is still only the recording action, teal the
+   rendered output, orange the footage (a transcript moment's timecode). */
+
+body { min-height: 100vh; }
+
+/* The sticky nav floats over the top ~74px of the viewport. Without this,
+   focus moving UP the grid (Shift+Tab) lands on a card or kebab the browser
+   considers "in view" but the opaque nav covers (WCAG 2.4.11). Nav + its
+   12px offset + air; the narrow layout's nav is shorter (media query). */
+html { scroll-padding-top: 96px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =================================================================
+   glass header (sticky; the grid scrolls underneath it)
+   ================================================================= */
+.lib-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 12px 16px 0;
+  pointer-events: none;      /* the margin around the floating nav stays click-through */
+}
+/* ...until content scrolls under it: the scrim below then covers that margin
+   at ~0.94 black, so a click there must not open a card nobody can see */
+.lib-top.is-scrolled { pointer-events: auto; }
+.lib-nav {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 62px;
+  padding: 9px 10px 9px 18px;
+  border-radius: var(--r-glass);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-rim), var(--hairline);
+  transition: background-color 240ms ease, box-shadow 240ms ease;
+}
+/* small mono text on the glass reads at --text-small, not --text-3 (~4:1).
+   The token, not `color`, so every role that picks --text-3 lifts and any
+   explicit colour (errors, the footage hue) still wins. */
+.lib-nav,
+.lib-q-panel { --text-3: rgba(234, 234, 234, 0.6); }
+
+/* a soft scrim behind the floating nav, so content scrolling up dissolves
+   into the page instead of peeking through the margin above the glass */
+.lib-top::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 14px);
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom,
+    rgba(10, 10, 10, 0.94) 0,
+    rgba(10, 10, 10, 0.7) 45%,
+    rgba(10, 10, 10, 0) 100%);
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+.lib-top.is-scrolled::before { opacity: 1; }
+/* content under the glass: darken it (bright thumbnails blur into a light
+   wash otherwise, and the wordmark has to stay legible) and lift it */
+.lib-top.is-scrolled .lib-nav {
+  background: var(--glass-dense);
+  box-shadow: var(--glass-rim), var(--hairline), var(--depth-2);
+}
+
+.lib-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.lib-logo {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  color: var(--text);
+  display: flex;
+}
+.lib-logo svg { width: 100%; height: 100%; }
+.lib-name {
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  padding-top: 2px;          /* DIN sits high in its box */
+  white-space: nowrap;
+}
+.lib-sub {
+  margin-left: 5px;
+  padding: 4px 9px 3px;
+  border-radius: var(--r-ctl);
+  background: var(--glass-fill);
+  box-shadow: var(--glass-rim);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.lib-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.lib-top-right .pill {
+  background: var(--glass-fill);
+  border-color: transparent;
+  box-shadow: var(--glass-rim);
+}
+
+/* a quiet control sitting on glass (the landing nav's link chips) */
+.lib-chip-btn,
+.lib-chip-btn.btn-quiet {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r-chip);
+  border-color: transparent;
+  background: var(--glass-fill);
+  color: var(--text-2);
+}
+.lib-chip-btn:hover,
+.lib-chip-btn.btn-quiet:hover {
+  background: var(--glass-fill-hover);
+  border-color: transparent;
+  color: var(--text);
+}
+
+/* recording is the product's one red action. Neutral depth, no coloured
+   glow: the red fill is signal enough (the landing CTA and the bar's record
+   button carry none either). */
+.lib-record-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--r-chip);
+  background: var(--rec);
+  border-color: transparent;
+  color: var(--bg);
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: background 120ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.lib-record-btn:hover {
+  background: var(--rec-hover);
+  border-color: transparent;
+}
+.lib-record-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.lib-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: none;
+  flex: none;
+}
+
+/* =================================================================
+   permissions banner (only when something is missing)
+   ================================================================= */
+/* red rim + dot + title only: a red wash here made a second red focal point
+   beside the New Recording button */
+.lib-perms {
+  margin: 16px 24px 0;
+  padding: 11px 11px 11px 18px;
+  border-radius: var(--r-panel);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px rgba(255, 42, 42, 0.26),
+              inset 0 1px 0 rgba(255, 138, 128, 0.12),
+              var(--depth-1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lib-perms strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--rec);
+  margin-bottom: 2px;
+}
+.lib-perms strong::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rec);
+  box-shadow: 0 0 0 3px rgba(255, 42, 42, 0.16);
+  flex: none;
+}
+.lib-perms .t-label { font-size: 12.5px; }
+
+/* =================================================================
+   search your recordings: the landing's frosted prompt bar
+   ================================================================= */
+.lib-search-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 26px 24px 4px;
+}
+.lib-search {
+  position: relative;
+  z-index: 30;               /* results float over the grid, under the sticky nav */
+  width: min(720px, 100%);
+}
+.lib-q-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 58px;
+  padding: 0 8px 0 20px;
+  border-radius: 999px;
+  background: var(--glass-field);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.14), var(--hairline), 0 20px 50px rgba(0, 0, 0, 0.32);
+  cursor: text;
+  transition: background-color 240ms ease, box-shadow 200ms ease;
+}
+.lib-q-bar:focus-within {
+  background: var(--glass-field-focus);
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.3), var(--hairline), 0 20px 50px rgba(0, 0, 0, 0.32);
+}
+/* No extra outline ring: a text input matches :focus-visible on a mouse
+   click too, so a ring here stacked a second capsule on every click. The
+   focus-within state above (rim 0.14 -> 0.3, darker field, brighter icon,
+   the "/" hint gone) is the focus indicator for mouse and keyboard alike. */
+.lib-q-icon {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  color: var(--text-3);
+  transition: color 200ms ease;
+}
+.lib-q-bar:focus-within .lib-q-icon { color: var(--text-2); }
+
+.lib-q-bar input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: 400 16px/1.2 var(--font);
+  letter-spacing: -0.005em;
+  caret-color: var(--text);
+  text-overflow: ellipsis;
+}
+.lib-q-bar input[type="text"]::placeholder { color: rgba(234, 234, 234, 0.52); opacity: 1; }
+
+.lib-q-slash {
+  flex: none;
+  padding: 3px 8px 2px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.2);
+  color: rgba(234, 234, 234, 0.6);
+  font: 500 12px/1.2 var(--mono);
+  transition: opacity 200ms ease;
+}
+.lib-q-bar:focus-within .lib-q-slash,
+.lib-q-bar.has-value .lib-q-slash { opacity: 0; }
+
+.lib-q-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(234, 234, 234, 0.12);
+  color: var(--text-2);
+  transition: background-color 200ms ease, color 200ms ease, transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lib-q-go svg { width: 18px; height: 18px; }
+.lib-q-go:hover { background: rgba(234, 234, 234, 0.22); border-color: transparent; color: var(--text); }
+.lib-q-go:active { transform: scale(0.94); }
+.lib-q-bar.has-value .lib-q-go { background: var(--text); color: var(--bg); }
+
+/* results: dense glass, so a bright thumbnail under it cannot wash it out */
+.lib-q-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 10px);
+  overflow: hidden;
+  border-radius: var(--r-float);
+  background: rgba(16, 16, 16, 0.9);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  box-shadow: 0 0 0 1px var(--line), var(--hairline), var(--depth-3);
+  animation: menu-in 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  transform-origin: top center;
+}
+.lib-q-list {
+  position: relative;        /* the options' offsetParent: library.js scrolls the list, not the page */
+  max-height: min(440px, 56vh);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+.lib-q-list:empty { padding: 0; }
+.lib-q-opt {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 14px;
+  padding: 9px 12px 9px 9px;
+  border-radius: var(--r-panel);
+  cursor: pointer;
+  scroll-margin: 6px;
+}
+.lib-q-opt + .lib-q-opt { margin-top: 2px; }
+.lib-q-opt[aria-selected="true"] {
+  background: rgba(234, 234, 234, 0.07);
+  box-shadow: inset 0 0 0 1px var(--line), var(--hairline);
+}
+.lib-q-thumb {
+  grid-row: 1 / span 2;
+  position: relative;
+  width: 72px;
+  aspect-ratio: 16 / 9;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.lib-q-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.82) contrast(1.18) brightness(0.86);
+  transition: filter 140ms ease;
+}
+.lib-q-opt[aria-selected="true"] .lib-q-thumb img { filter: grayscale(0.35) contrast(1.08) brightness(0.98); }
+.lib-q-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lib-q-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+}
+/* a moment in the footage: the footage hue, as on the landing page */
+.lib-q-tc {
+  padding: 3px 7px 2px;
+  border-radius: 6px;
+  background: rgba(217, 155, 74, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(217, 155, 74, 0.3);
+  color: var(--clip);
+  font: 500 11.5px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.lib-q-dur {
+  color: var(--text-3);
+  font: 500 11.5px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.lib-q-text {
+  grid-column: 2 / -1;
+  min-width: 0;
+  color: rgba(234, 234, 234, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lib-q-sub {
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* matched words: a quiet underline, not a filled chip */
+.lib-q-panel mark {
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(234, 234, 234, 0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.lib-q-empty {
+  padding: 16px 20px 14px;
+  color: rgba(234, 234, 234, 0.74);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.lib-q-empty p + p { margin-top: 4px; color: var(--text-3); font-size: 12.5px; }
+
+.lib-q-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 18px 10px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.lib-q-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-q-status.is-indexing::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex: none;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.lib-q-keys { flex: none; white-space: nowrap; }
+.lib-q-keys kbd {
+  display: inline-block;
+  min-width: 18px;
+  margin: 0 2px 0 6px;
+  padding: 1px 4px 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.2);
+  font: 10.5px/1.4 var(--mono);
+  text-align: center;
+}
+.lib-q-keys kbd + kbd { margin-left: 0; }
+
+/* =================================================================
+   the grid
+   ================================================================= */
+.lib-main {
+  max-width: none;
+  margin: 0;
+  padding: 24px 24px 56px;
+}
+
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 18px;
+  border: none;
+  background: transparent;
+}
+
+/* project card: soft depth instead of a hard border; the rim + top
+   highlight ride an overlay so they frame the thumbnail too */
+.proj-card {
+  position: relative;
+  border-radius: var(--r-panel);
+  background: var(--surface-1);
+  border: 0;
+  box-shadow: var(--depth-1);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.23, 1, 0.32, 1),
+              box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.proj-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(234, 234, 234, 0.1);
+  transition: box-shadow 160ms ease;
+}
+.proj-card:hover {
+  background: var(--surface-2);
+  transform: translateY(-2px);
+  box-shadow: var(--depth-2);
+}
+.proj-card:hover::after {
+  box-shadow: inset 0 0 0 1px var(--line-strong), inset 0 1px 0 rgba(234, 234, 234, 0.14);
+}
+.proj-card:active { transform: translateY(0); }
+.proj-card:focus-visible { outline: 2px solid var(--rec); outline-offset: 2px; }
+
+.proj-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--inset);
+  overflow: hidden;
+  border-radius: var(--r-panel) var(--r-panel) 0 0;
+}
+.proj-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(234, 234, 234, 0.08) 0,
+    rgba(234, 234, 234, 0.08) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.32;
+}
+.proj-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.82) contrast(1.18) brightness(0.86);
+  transition: filter 160ms ease;
+}
+.proj-card:hover .proj-thumb img { filter: grayscale(0.35) contrast(1.08) brightness(0.98); }
+.proj-thumb .proj-thumb-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-4);
+  font-size: 12px;
+}
+/* duration: a frosted chip over the footage (red stays the record action) */
+.proj-duration {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  padding: 3px 7px 2px;
+  border-radius: 6px;
+  background: rgba(10, 10, 10, 0.58);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px rgba(234, 234, 234, 0.16), inset 0 1px 0 rgba(234, 234, 234, 0.08);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.proj-body { padding: 12px 12px 13px 14px; }
+.proj-name-row { display: flex; align-items: center; gap: 8px; }
+.proj-name {
+  flex: 1 1 auto;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proj-kebab {
+  flex: none;
+  opacity: 0;
+  border-radius: var(--r-chip);
+  transition: opacity 120ms ease;
+}
+.proj-card:hover .proj-kebab, .proj-kebab[aria-expanded="true"] { opacity: 1; }
+.proj-kebab:focus-visible { opacity: 1; }
+.proj-meta {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-small);   /* 10.5px caps: --text-3 is ~4:1 here */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.proj-badges { margin-top: 9px; display: flex; gap: 5px; min-height: 18px; }
+.proj-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px 1px;
+  border-radius: 6px;
+  color: var(--text-2);
+  background: var(--glass-fill);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.proj-badge.edited { color: var(--text); background: rgba(234, 234, 234, 0.08); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.proj-badge.rendered { color: var(--cam-bright); background: var(--cam-soft); box-shadow: inset 0 0 0 1px rgba(89, 199, 189, 0.24); }
+.proj-badge.err { color: var(--err); background: rgba(255, 42, 42, 0.12); box-shadow: inset 0 0 0 1px rgba(255, 42, 42, 0.38); }
+
+/* rename inline input */
+.proj-name input {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+/* =================================================================
+   empty state
+   ================================================================= */
+.lib-empty {
+  min-height: calc(100vh - 150px);
+  padding: 72px 24px 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+/* no backdrop-filter: over the flat page there is nothing to blur, so the
+   tile is a raised surface with the glass rim, not "glass" */
+.lib-empty-art {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--r-float);
+  background: var(--surface-1);
+  box-shadow: var(--glass-rim-strong), var(--hairline), var(--depth-1);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.lib-empty-art svg { width: 38px; height: 38px; }
+.lib-empty h2 { font-size: 22px; }
+.lib-empty p { max-width: 440px; text-wrap: balance; }
+.lib-empty button { margin-top: 10px; }
+
+/* =================================================================
+   narrow windows
+   ================================================================= */
+@media (max-width: 760px) {
+  html { scroll-padding-top: 88px; }
+  .lib-top { padding: 10px 10px 0; }
+  .lib-nav { padding: 8px 8px 8px 14px; gap: 10px; }
+  .lib-sub { display: none; }
+  .lib-top-right .pill { display: none; }
+  .lib-chip-btn, .lib-chip-btn.btn-quiet { padding: 0 11px; }
+  .lib-record-btn { padding: 0 12px; }
+  .lib-perms { margin: 12px 16px 0; }
+  .lib-search-wrap { padding: 18px 16px 0; }
+  .lib-q-bar { height: 52px; padding-left: 16px; gap: 10px; }
+  .lib-q-slash { display: none; }
+  .lib-q-keys { display: none; }
+  .lib-q-opt { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 3px 10px; }
+  .lib-q-thumb { width: 56px; }
+  .lib-main { padding: 16px; }
+  .lib-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .lib-name { font-size: 19px; }
+  #lib-refresh { display: none; }
+}

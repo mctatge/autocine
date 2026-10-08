@@ -1,0 +1,492 @@
+/* ui.css - shared design tokens + base controls for all three surfaces
+   (library / editor / recording bar).
+
+   Direction: tactical telemetry. A dark CRT substrate, crisp softened
+   geometry, strict mono labels, and signal red as the operational accent.
+   Camera teal and footage amber stay semantic inside the editor timeline. */
+
+:root {
+  color-scheme: dark;
+
+  /* chassis: dark telemetry substrate, lightness steps only */
+  --bg: #0a0a0a;            /* page */
+  --surface-1: #101010;     /* cards, panels */
+  --surface-2: #171717;     /* raised: popovers, hover, active rows */
+  --surface-3: #202020;     /* highest: menus, drag states */
+  --inset: #070707;         /* wells: inputs, timeline rail, preview pit */
+
+  /* lines */
+  --line: rgba(234, 234, 234, 0.12);
+  --line-strong: rgba(234, 234, 234, 0.28);
+
+  /* text tiers */
+  --text: #eaeaea;
+  --text-2: rgba(234, 234, 234, 0.68);
+  --text-3: rgba(234, 234, 234, 0.46);
+  --text-4: rgba(234, 234, 234, 0.28);
+
+  /* the semantic hues — each one MEANS something and appears nowhere else:
+     teal   = the camera (zooms, camera line, primary actions, "rendered")
+     orange = the footage (clip track, waveform, chapters, warnings)
+     red    = the recording signal
+     white  = selection — your hand on a clip, like an NLE outline */
+  --cam: #59c7bd;
+  --cam-bright: #85eee5;
+  --cam-deep: #358f88;
+  --cam-soft: rgba(89, 199, 189, 0.12);
+  --cam-line: rgba(133, 238, 229, 0.5);
+  --clip: #d99b4a;
+  --rec: #ff2a2a;
+  --rec-hover: #ff4a42;
+  --sel: #eaeaea;
+  --sel-ring: rgba(234, 234, 234, 0.9);
+  --ok: var(--cam);
+  --warn: #e08a3c;
+  --err: #e04b41;
+
+  /* shape */
+  --r-ctl: 7px;
+  --r-card: 8px;
+  --r-panel: 12px;
+
+  /* rings (dark mode: borders over shadows); --edge is the machined
+     top-highlight that makes panels read as hardware, not flat paint */
+  --ring: 0 0 0 1px var(--line);
+  --ring-pop: 0 0 0 1px var(--line-strong), 0 14px 0 rgba(0, 0, 0, 0.24);
+  --edge: inset 0 1px 0 rgba(234, 234, 234, 0.06);
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display: "DIN Alternate", "Trebuchet MS", "Arial Narrow", sans-serif;
+}
+
+/* ---- glass + depth (library chrome; the bar borrows a few) ----
+   The landing page's material (site/styles.css nav + prompt bar) carried
+   into the app's NEUTRAL chassis: frosted chrome floating over content,
+   hairline top highlights, soft layered shadows instead of hard borders.
+   Chrome only -- never the editor's stage or timeline. No new hues: every
+   value here is a neutral alpha. Additive: nothing above depends on it.
+   Who reads what: library.css uses the whole block. The recording bar
+   uses NONE of it -- bar.css carries its own measured "Frost" values (its
+   legibility over a white desktop was measured on the native pill; see the
+   bar paragraphs in docs/architecture.md), and a --depth-* would overflow its
+   28px shadow pad anyway. */
+:root {
+  --glass: rgba(18, 18, 18, 0.56);            /* frosted chrome at rest */
+  --glass-dense: rgba(14, 14, 14, 0.82);      /* over busy/bright content: the scrolled library nav */
+  --glass-field: rgba(136, 136, 136, 0.13);   /* the prompt-bar pill: lighter, so it reads as a field */
+  --glass-field-focus: rgba(40, 40, 40, 0.7);
+  --glass-blur: blur(18px) saturate(1.2);
+  --glass-blur-strong: blur(24px) saturate(1.1);
+  --glass-rim: inset 0 0 0 1px rgba(234, 234, 234, 0.09);
+  --glass-rim-strong: inset 0 0 0 1px rgba(234, 234, 234, 0.16);
+  --hairline: inset 0 1px 0 rgba(234, 234, 234, 0.07);   /* the top-edge highlight */
+  --glass-fill: rgba(234, 234, 234, 0.055);   /* a control sitting ON glass (landing nav links) */
+  --glass-fill-hover: rgba(234, 234, 234, 0.11);
+  --depth-1: 0 1px 2px rgba(0, 0, 0, 0.32), 0 8px 22px rgba(0, 0, 0, 0.24);    /* resting */
+  --depth-2: 0 2px 6px rgba(0, 0, 0, 0.34), 0 18px 44px rgba(0, 0, 0, 0.38);   /* lifted / hover */
+  --depth-3: 0 28px 70px rgba(0, 0, 0, 0.55);                                   /* floating panel */
+  /* small mono/caps text: --text-3 (0.46) only reaches ~4:1 on these
+     surfaces, under AA for 10-11px type. The landing's --text-small value;
+     >= 4.5:1 on the glass and on --surface-1. */
+  --text-small: rgba(234, 234, 234, 0.62);
+  /* radii on glass, beside --r-ctl / --r-card / --r-panel above:
+     a chip or button inside a glass bar (concentric with --r-glass's ~9px
+     inset), the floating glass bar itself, a panel floating over content */
+  --r-chip: 8px;
+  --r-glass: 16px;
+  --r-float: 20px;
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(234, 234, 234, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(234, 234, 234, 0.026) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+body:not(.bar-body):not(.face-body)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(234, 234, 234, 0.028) 0,
+    rgba(234, 234, 234, 0.028) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  opacity: 0.45;
+  mix-blend-mode: screen;
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+
+/* ---- type roles ----
+   display — DIN Alternate, the equipment voice: wordmark, headings, lane
+             labels. Caps with TIGHT tracking (machine lettering, never the
+             airy letterspaced-eyebrow look).
+   body    — system sans, everything conversational
+   data    — mono for anything temporal or optical (timecode, durations,
+             multipliers, dimensions) */
+.t-title  { font-size: 15px; font-weight: 650; letter-spacing: 0; }
+.t-display {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.t-label  { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.t-cap    {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.t-mono   { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+
+/* ---- buttons ---- */
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  padding: 7px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 120ms cubic-bezier(0.23, 1, 0.32, 1),
+              transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+button:hover { background: var(--surface-2); border-color: var(--line-strong); }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.45; cursor: default; transform: none; }
+button:disabled:hover { background: var(--surface-1); border-color: var(--line); }
+button:focus-visible { outline: 2px solid var(--rec); outline-offset: 1px; }
+
+.btn-primary {
+  background: var(--rec);
+  border-color: transparent;
+  color: var(--bg);
+  font-weight: 800;
+}
+.btn-primary:hover { background: var(--rec-hover); border-color: transparent; }
+
+.btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+}
+.btn-quiet:hover { background: var(--surface-2); border-color: transparent; color: var(--text); }
+
+.btn-danger { color: var(--err); }
+.btn-danger:hover { background: rgba(224, 75, 65, 0.12); border-color: rgba(224, 75, 65, 0.3); }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+.btn-icon svg { width: 16px; height: 16px; display: block; }
+
+/* ---- inputs ---- */
+input[type="text"], input[type="number"], select {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  padding: 6px 8px;
+  min-width: 0;
+}
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='rgba(244,241,236,0.5)' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+}
+input:focus-visible, select:focus-visible {
+  outline: none;
+  border-color: var(--rec);
+}
+input[type="number"] { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; }
+input::placeholder { color: var(--text-4); }
+
+/* ---- toggle switch ---- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 19px;
+  flex: none;
+}
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch .knob {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: background 140ms cubic-bezier(0.23, 1, 0.32, 1);
+  pointer-events: none;
+}
+.switch .knob::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.switch input:checked + .knob { background: var(--rec); box-shadow: none; }
+.switch input:checked + .knob::after { transform: translateX(13px); background: var(--bg); }
+.switch input:disabled + .knob { opacity: 0.4; }
+.switch input:focus-visible + .knob { outline: 2px solid var(--rec); outline-offset: 1px; }
+
+/* ---- slider ---- */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 19px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+input[type="range"].slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right,
+      var(--cam-deep) 0%,
+      var(--cam-deep) var(--fill, 0%),
+      var(--surface-3) var(--fill, 0%),
+      var(--surface-3) 100%);
+}
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--sel);
+  border: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+input[type="range"].slider:focus-visible { outline: none; }
+input[type="range"].slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--rec);
+}
+input[type="range"].slider:disabled { opacity: 0.4; }
+
+/* ---- segmented control ---- */
+.seg {
+  display: inline-flex;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r-ctl) + 2px);
+  padding: 2px;
+  gap: 2px;
+}
+.seg button {
+  background: transparent;
+  border: none;
+  border-radius: var(--r-ctl);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.seg button:hover { background: var(--surface-2); color: var(--text); }
+.seg button.on { background: var(--surface-3); color: var(--text); font-weight: 600; }
+.seg button:active { transform: none; }
+
+/* ---- rows / fields ---- */
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+}
+.field-row > .t-label { flex: 1 1 auto; }
+
+/* ---- status dot / pill ---- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex: none; }
+.pill.ok .dot { background: var(--ok); }
+.pill.warn .dot { background: var(--warn); }
+.pill.err .dot { background: var(--err); }
+.pill.rec .dot { background: var(--rec); animation: pulse 1.4s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ---- swatches ---- */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.swatch {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+  background: var(--surface-2);
+  transition: transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.swatch:hover { transform: scale(1.06); border-color: var(--line-strong); }
+.swatch.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--sel-ring); border-color: transparent; }
+
+/* ---- menus / popovers ---- */
+.menu {
+  position: absolute;
+  z-index: 60;
+  min-width: 150px;
+  background: var(--surface-3);
+  border-radius: var(--r-card);
+  box-shadow: var(--ring-pop), var(--edge);
+  padding: 4px;
+  animation: menu-in 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--r-ctl);
+  font-size: 12.5px;
+}
+.menu button:hover { background: rgba(255, 250, 240, 0.09); color: var(--text); }
+.menu button.danger:hover { background: var(--err); color: var(--bg); }
+.menu .sep { height: 1px; margin: 4px 6px; background: var(--line); }
+@keyframes menu-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---- modal ---- */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 160ms ease-out;
+}
+.modal {
+  width: min(460px, calc(100vw - 48px));
+  background: var(--surface-2);
+  border-radius: var(--r-panel);
+  box-shadow: var(--ring-pop), var(--edge);
+  padding: 20px;
+  animation: modal-in 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---- toast ---- */
+.toast-wrap {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--surface-3);
+  box-shadow: var(--ring-pop), var(--edge);
+  border-radius: var(--r-ctl);
+  padding: 8px 14px;
+  font-size: 12.5px;
+  color: var(--text);
+  animation: toast-in 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.toast.err { color: #ffb8ae; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- scrollbars ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 250, 240, 0.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 250, 240, 0.2); }
+::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

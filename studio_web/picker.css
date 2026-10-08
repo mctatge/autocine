@@ -1,0 +1,177 @@
+/* Full-screen window picker overlay.
+ *
+ * The window itself is transparent (pywebview transparent=True), so
+ * everything visible here is painted by us — there is no page background to
+ * inherit and nothing to letterbox against. */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  /* The whole point of this window is to eat clicks, so no click-through
+   * dance here — unlike the pill, which spends real effort staying out of
+   * the way. */
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#pk-canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- badges: the "this is card 2" numbers, drawn in DOM so they're text ---- */
+
+#pk-badges { position: fixed; inset: 0; pointer-events: none; }
+
+.pk-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--bg);
+  background: var(--rec);
+  box-shadow: none;
+}
+
+/* ---- HUD ---- */
+
+.pk-hud {
+  position: fixed;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: min(560px, calc(100vw - 96px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: var(--r-panel);
+  background: rgba(10, 10, 10, 0.97);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--ring-pop);
+}
+
+.pk-hud-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pk-hud-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.pk-hud-count { font-size: 13px; color: var(--text-3); }
+
+.pk-hud-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.pk-warn-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--rec);
+}
+
+/* ---- the un-overlap opt-in ---- */
+
+.pk-arrange {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-card);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  cursor: pointer;
+}
+.pk-arrange input { flex: none; margin: 2px 0 0; accent-color: var(--cam); }
+.pk-arrange strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pk-arrange em {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+/* ---- actions ---- */
+
+.pk-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pk-keys { margin-right: auto; color: var(--text-4); }
+
+kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 250, 240, 0.09);
+  color: inherit;
+}
+
+.pk-btn {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface-3);
+  box-shadow: var(--ring), var(--edge);
+}
+.pk-btn-ghost { background: transparent; box-shadow: var(--ring); color: var(--text-2); }
+.pk-btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+.pk-btn-go { color: var(--bg); background: var(--rec); box-shadow: none; }
+.pk-btn-go:hover { background: var(--rec-hover); }
+.pk-btn-go:disabled { opacity: 0.4; cursor: default; background: var(--surface-3); color: var(--text-3); }
+.pk-btn-go kbd { background: rgba(8, 33, 31, 0.18); }
+.pk-btn-go:disabled kbd { background: rgba(255, 250, 240, 0.09); }
+
+/* Nothing on the picker should be draggable-looking; the HUD is the one
+ * place the crosshair is wrong. */
+.pk-hud, .pk-hud * { cursor: default; }
+.pk-arrange, .pk-arrange *, .pk-btn { cursor: pointer; }

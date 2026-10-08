@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Editor - AutoCine</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg fill='none' stroke='%23eaeaea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 11V8.5A2.5 2.5 0 018.5 6H11'/%3E%3Cpath d='M21 6h2.5A2.5 2.5 0 0126 8.5V11'/%3E%3Cpath d='M26 21v2.5a2.5 2.5 0 01-2.5 2.5H21'/%3E%3Cpath d='M11 26H8.5A2.5 2.5 0 016 23.5V21'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff2a2a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/editor.css" />
+</head>
+<body class="ed-body">
+
+  <header class="ed-top">
+    <div class="ed-top-left">
+      <a class="ed-back" href="/" title="Back to projects">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>
+        Projects
+      </a>
+      <div class="ed-title-wrap">
+        <span class="ed-title" id="ed-title" title="Click to rename">Untitled</span>
+        <span class="ed-save-state t-cap" id="ed-save-state"></span>
+      </div>
+    </div>
+    <div class="ed-top-right">
+      <button class="btn-quiet ed-newrec" id="ed-new-recording" title="Start a new recording (opens the recorder)">
+        <span class="ed-newrec-dot"></span>New Recording
+      </button>
+      <div class="ed-top-sep"></div>
+      <button class="btn-icon btn-quiet" id="ed-undo" title="Undo (⌘Z)" disabled></button>
+      <button class="btn-icon btn-quiet" id="ed-redo" title="Redo (⇧⌘Z)" disabled></button>
+      <div class="ed-top-sep"></div>
+      <select id="ed-preset" title="Preset"></select>
+      <button class="btn-quiet" id="ed-preset-dup" title="Duplicate current preset">Duplicate</button>
+      <div class="ed-top-sep"></div>
+      <button class="btn-quiet" id="ed-reveal" title="Reveal session in Finder">Reveal</button>
+      <button class="btn-primary ed-export-btn" id="ed-export-open">Export</button>
+    </div>
+  </header>
+
+  <div class="ed-main">
+    <section class="ed-stage">
+      <div class="ed-stage-tools">
+        <label class="ed-aspect-label t-cap">Aspect
+          <select id="ed-aspect">
+            <option value="auto">Auto</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="1:1">1:1</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+          </select>
+        </label>
+        <label class="ed-aspect-label t-cap">Resolution
+          <select id="ed-resolution">
+            <option value="auto">Auto</option>
+            <option value="2160">2160p</option>
+            <option value="1440">1440p</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+          </select>
+        </label>
+        <span class="t-cap" id="ed-stage-note"></span>
+        <span class="t-cap ed-zoom-readout t-mono" id="ed-zoom-readout"></span>
+      </div>
+      <div class="ed-canvas-wrap" id="ed-canvas-wrap">
+        <div class="ed-canvas" id="ed-canvas">
+          <div class="ed-frame-bg" id="ed-frame-bg"></div>
+          <div class="ed-viewport" id="ed-viewport">
+            <video id="ed-video" muted playsinline preload="auto"></video>
+          </div>
+          <!-- Live multi-window composite. The <video> above can only show one
+               crop, so windows mode draws the grid here instead; see editor.js's
+               drawMulti + render.multi_window_layout. -->
+          <canvas class="ed-multi" id="ed-multi" hidden></canvas>
+          <!-- The webcam track, decoded only so drawMulti can sample it into
+               the bubble. Never displayed itself -- the composite draws it.
+               NOT `hidden`: display:none is exactly the state engines are
+               free to stop decoding in, and drawImage would then paint a
+               stale frame or nothing. .ed-face-src keeps it laid out and
+               invisible instead. -->
+          <video id="ed-face" class="ed-face-src" muted playsinline preload="auto"></video>
+          <img class="ed-still" id="ed-still" alt="" />
+          <canvas class="ed-cardchrome" id="ed-cardchrome" hidden></canvas>
+          <div class="ed-pin-dot" id="ed-pin-dot" hidden></div>
+          <div class="ed-pin-hint" id="ed-pin-hint" hidden>Click anywhere on the frame to place the zoom target</div>
+          <div class="ed-winpick-rect" id="ed-winpick-rect" hidden></div>
+          <div class="ed-winpick-hint" id="ed-winpick-hint" hidden>Drag a rectangle around the window you want to frame</div>
+          <div class="ed-winpick-rect" id="ed-crop-rect" hidden></div>
+          <div class="ed-crop-box" id="ed-crop-box" hidden></div>
+          <div class="ed-winpick-hint" id="ed-crop-hint" hidden>Drag the part of the frame you want to keep</div>
+          <div class="ed-canvas-msg" id="ed-canvas-msg" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="ed-inspector" id="ed-inspector" hidden>
+      <div class="ed-panel" id="ed-panel"></div>
+    </aside>
+
+    <nav class="ed-rail" id="ed-rail">
+      <button class="ed-rail-btn" data-panel="zoom" title="Zoom"></button>
+      <button class="ed-rail-btn" data-panel="frame" title="Background &amp; frame"></button>
+      <button class="ed-rail-btn" data-panel="windows" title="Windows"></button>
+      <button class="ed-rail-btn" data-panel="cursor" title="Cursor &amp; clicks"></button>
+      <button class="ed-rail-btn" data-panel="facecam" title="Facecam"></button>
+      <button class="ed-rail-btn" data-panel="audio" title="Audio"></button>
+      <button class="ed-rail-btn" data-panel="transcript" title="Transcript"></button>
+    </nav>
+  </div>
+
+  <footer class="ed-timeline">
+    <div class="ed-transport">
+      <div class="ed-transport-left t-mono">
+        <span class="ed-time" id="ed-time">0:00.00</span>
+        <span class="ed-time-total" id="ed-total">/ 0:00.00</span>
+      </div>
+      <div class="ed-transport-center">
+        <button class="btn-icon btn-quiet" id="ed-skip-back" title="Jump to start"></button>
+        <button class="btn-icon ed-play" id="ed-play" title="Play/Pause (Space)"></button>
+        <button class="btn-icon btn-quiet" id="ed-skip-fwd" title="Jump to end"></button>
+      </div>
+      <div class="ed-transport-right">
+        <button class="btn-quiet" id="ed-add-zoom" title="Add a manual zoom at the playhead (Z)">+ Zoom</button>
+        <button class="btn-quiet" id="ed-add-suppress" title="Suppress auto-zoom around the playhead (S)" style="display:none">+ No-zoom</button>
+        <button class="btn-quiet" id="ed-add-marker" title="Add a chapter marker at the playhead (M)">+ Marker</button>
+      </div>
+    </div>
+
+    <div class="ed-tl" id="ed-tl">
+      <canvas class="ed-ruler" id="ed-ruler"></canvas>
+      <div class="ed-lane ed-clip-lane" id="ed-clip-lane">
+        <div class="ed-trim-dim ed-trim-dim-left" id="ed-dim-left"></div>
+        <div class="ed-trim-dim ed-trim-dim-right" id="ed-dim-right"></div>
+        <div class="ed-clip-bar" id="ed-clip-bar">
+          <canvas class="ed-wave" id="ed-wave"></canvas>
+          <span class="ed-clip-label" id="ed-clip-label"></span>
+          <div class="ed-trim-handle ed-trim-left" id="ed-trim-left"></div>
+          <div class="ed-trim-handle ed-trim-right" id="ed-trim-right"></div>
+        </div>
+      </div>
+      <div class="ed-lane ed-zoom-lane" id="ed-zoom-lane" title="Double-click to add a zoom">
+        <canvas class="ed-cam" id="ed-cam"></canvas>
+        <span class="ed-lane-tag">Camera</span>
+      </div>
+      <div class="ed-lane ed-suppress-lane" id="ed-suppress-lane" title="Double-click to add a no-zoom range" style="display:none">
+        <span class="ed-lane-tag">No-zoom</span>
+      </div>
+      <div class="ed-lane ed-marker-lane" id="ed-marker-lane" title="Double-click to add a marker">
+        <span class="ed-lane-tag">Chapters</span>
+      </div>
+      <div class="ed-playhead" id="ed-playhead"><span class="ed-playhead-dot"></span></div>
+    </div>
+  </footer>
+
+  <!-- marker popover (positioned by JS) -->
+  <div class="ed-marker-pop" id="ed-marker-pop" hidden>
+    <div class="field-row">
+      <span class="t-label">Label</span>
+      <input type="text" id="mp-label" placeholder="Chapter name" maxlength="120" style="width:150px" />
+    </div>
+    <div class="field-row">
+      <span class="t-label">Time</span>
+      <input type="number" id="mp-time" step="0.01" min="0" style="width:80px" />
+    </div>
+    <div class="ed-marker-pop-sum t-cap" id="mp-summary"></div>
+    <div class="ed-marker-pop-row">
+      <button id="mp-trim" class="btn-quiet">Trim to chapter</button>
+      <button id="mp-delete" class="btn-quiet btn-danger">Delete</button>
+    </div>
+  </div>
+
+  <!-- export modal -->
+  <div class="modal-scrim" id="ed-export-scrim" hidden>
+    <div class="modal">
+      <h2 class="t-title" style="margin-bottom:16px">Export</h2>
+      <div class="field-row">
+        <span class="t-label">Format</span>
+        <div class="seg" id="ex-format">
+          <button data-v="mp4" class="on">MP4</button>
+          <button data-v="mp4gif">MP4 + GIF</button>
+        </div>
+      </div>
+      <div id="ex-gif-opts" hidden>
+        <div class="field-row">
+          <span class="t-label">GIF frame rate</span>
+          <input type="number" id="ex-gif-fps" min="1" max="50" step="1" value="15" style="width:70px" />
+        </div>
+        <div class="field-row">
+          <span class="t-label">GIF width (px)</span>
+          <input type="number" id="ex-gif-width" min="64" max="4000" step="10" value="1000" style="width:70px" />
+        </div>
+      </div>
+      <div class="ex-status" id="ex-status" hidden>
+        <span class="ex-spinner" id="ex-spinner"></span>
+        <span class="t-label" id="ex-message"></span>
+      </div>
+      <div class="ex-actions">
+        <button id="ex-reveal" class="btn-quiet" hidden>Reveal in Finder</button>
+        <span style="flex:1"></span>
+        <button id="ex-cancel" class="btn-quiet">Close</button>
+        <button id="ex-start" class="btn-primary">Export to file</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/editor.js"></script>
+  <script src="/live-reload.js"></script>
+</body>
+</html>
